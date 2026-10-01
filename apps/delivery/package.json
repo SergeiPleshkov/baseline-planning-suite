@@ -10,7 +10,9 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.domain.json"
   },
   "dependencies": {
+    "@baseline/delivery-contract": "workspace:*",
     "@baseline/host-contract": "workspace:*",
+    "@baseline/people-contract": "workspace:*",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

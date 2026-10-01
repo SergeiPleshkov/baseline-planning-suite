@@ -190,9 +190,15 @@ importers:
 
   apps/delivery:
     dependencies:
+      '@baseline/delivery-contract':
+        specifier: workspace:*
+        version: link:../../contracts/delivery
       '@baseline/host-contract':
         specifier: workspace:*
         version: link:../../contracts/host
+      '@baseline/people-contract':
+        specifier: workspace:*
+        version: link:../../contracts/people
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -230,6 +236,9 @@ importers:
       '@baseline/host-contract':
         specifier: workspace:*
         version: link:../../contracts/host
+      '@baseline/people-contract':
+        specifier: workspace:*
+        version: link:../../contracts/people
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -252,9 +261,15 @@ importers:
       '@types/react-dom':
         specifier: ^19.3.0
         version: 19.3.0(@types/react@19.3.0)
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(vite@8.3.1(jiti@2.4.2))
 
   apps/shell:
     dependencies:
@@ -293,11 +308,37 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
+  contracts/delivery:
+    dependencies:
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(vite@8.3.1(jiti@2.4.2))
+
   contracts/host:
     devDependencies:
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
+
+  contracts/people:
+    dependencies:
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(vite@8.3.1(jiti@2.4.2))
 
 packages:
 
