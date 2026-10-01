@@ -54,6 +54,34 @@ export default defineConfig(
     },
   },
   {
+    // Domain code is plain TypeScript: no UI, no I/O, no other team's types.
+    files: ['apps/*/src/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { regex: '^react(-dom)?(/|$)', message: 'Domain code must not depend on React.' },
+            { regex: '^@baseline/', message: 'Contracts are mapped outside the domain.' },
+          ],
+        },
+      ],
+      'import-x/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            {
+              target: './apps/delivery/src/domain',
+              from: './apps/delivery/src',
+              except: ['./domain'],
+              message: 'Domain code must not import application, UI or infrastructure code.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/**/*.tsx'],
     extends: [reactHooks.configs.flat['recommended-latest']],
   },

@@ -1,0 +1,44 @@
+/** A calendar date, `YYYY-MM-DD`. Lexicographic order is chronological order. */
+export type IsoDate = string & { readonly __brand: 'IsoDate' };
+
+/** A calendar month, `YYYY-MM`. */
+export type YearMonth = string & { readonly __brand: 'YearMonth' };
+
+const pad = (value: number): string => String(value).padStart(2, '0');
+
+function isCalendarDate(year: number, month: number, day: number): boolean {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+}
+
+export function isoDate(value: string): IsoDate {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match || !isCalendarDate(Number(match[1]), Number(match[2]), Number(match[3]))) {
+    throw new RangeError(`Not a calendar date (YYYY-MM-DD): ${value}`);
+  }
+  return value as IsoDate;
+}
+
+export function yearMonth(value: string): YearMonth {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match || !isCalendarDate(Number(match[1]), Number(match[2]), 1)) {
+    throw new RangeError(`Not a calendar month (YYYY-MM): ${value}`);
+  }
+  return value as YearMonth;
+}
+
+/** Monday to Friday. Public holidays are ignored by design. */
+export function workingDaysIn(month: YearMonth): readonly IsoDate[] {
+  const year = Number(month.slice(0, 4));
+  const monthIndex = Number(month.slice(5, 7)) - 1;
+  const days: IsoDate[] = [];
+  for (let day = 1; isCalendarDate(year, monthIndex + 1, day); day++) {
+    const weekday = new Date(Date.UTC(year, monthIndex, day)).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) {
+      days.push(`${month}-${pad(day)}` as IsoDate);
+    }
+  }
+  return days;
+}

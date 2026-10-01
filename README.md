@@ -28,6 +28,21 @@ shell (host, :3000) ── reads /config.json at start-up ──► registers re
 - **Team boundaries are linted.** Packages reach each other only through `@baseline/*-contract`
   packages; relative imports into another package fail `pnpm lint`.
 
+## Domain rules
+
+Calculation logic lives in `apps/delivery/src/domain` as plain TypeScript and is tested without a
+browser. That folder compiles against its own `tsconfig.domain.json` (no DOM, no Node types), and
+lint rejects React, contracts or app code imported from it.
+
+- **Working days** are Monday to Friday; public holidays are ignored.
+- **Rates are effective-dated.** A rate applies from its `validFrom` (inclusive) until the next one;
+  the last has no end; before the first there is no rate, so those days cost nothing and are
+  reported as unpriced.
+- **Months split.** An allocation is spread evenly over the month's working days; each run of days
+  at one rate is a slice priced at that rate. One person-month is `weeklyHours × workingDays / 5`.
+- The case study's reference calculation (A. Okafor, March 2026: 22 days, 176 h, 88 h, €7,880.00,
+  blended €89.5455/h) is a test: `apps/delivery/src/domain/pricing.test.ts`.
+
 ## Repository
 
 | Path                      | What it is                                                              |
@@ -47,6 +62,7 @@ Requires Node 24 and pnpm (version pinned in `package.json` → `packageManager`
 ```bash
 pnpm install
 pnpm dev        # shell http://localhost:3000 · people :3001 · delivery :3002
+pnpm test
 pnpm typecheck
 pnpm lint
 pnpm build
