@@ -58,6 +58,7 @@ lint rejects React, contracts or app code imported from it.
 | `seed/baseline-seed.json` | Fixtures shipped with the exercise. Ids and values are kept verbatim.   |
 | `tsconfig.base.json`      | Strict compiler settings every package extends.                         |
 | `eslint.config.js`        | Type-aware lint rules (`no-explicit-any`, hooks, team-boundary checks). |
+| `CLAUDE.md`, `.claude/`   | Project rules and guardrails for AI-assisted work with Claude Code.     |
 
 ## Development
 

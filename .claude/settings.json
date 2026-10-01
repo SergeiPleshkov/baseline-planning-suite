@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git add --dry-run *)",
+      "Bash(pnpm -r test)",
+      "Bash(pnpm -r typecheck)",
+      "Bash(pnpm -r build)",
+      "Bash(pnpm exec eslint *)",
+      "Bash(pnpm exec prettier *)",
+      "Bash(pnpm --filter * test)",
+      "Bash(pnpm --filter * build)"
+    ],
+    "deny": ["Bash(git commit *)", "Bash(git push *)", "Edit(seed/**)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-on-write.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
