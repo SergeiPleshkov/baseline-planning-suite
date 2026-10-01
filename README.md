@@ -40,6 +40,10 @@ lint rejects React, contracts or app code imported from it.
   reported as unpriced.
 - **Months split.** An allocation is spread evenly over the month's working days; each run of days
   at one rate is a slice priced at that rate. One person-month is `weeklyHours × workingDays / 5`.
+- **Four units, one stored value.** Allocations are stored in person-months only. Hours, % of
+  capacity and cost (in the display currency) are computed for one employee-month on the way out;
+  a value typed in any unit is converted back. Cost converts through that month's blended rate, so
+  it cannot be entered for a month without any rate. Switching units never writes anything.
 - The case study's reference calculation (A. Okafor, March 2026: 22 days, 176 h, 88 h, €7,880.00,
   blended €89.5455/h) is a test: `apps/delivery/src/domain/pricing.test.ts`.
 
