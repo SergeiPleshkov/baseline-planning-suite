@@ -44,6 +44,13 @@ lint rejects React, contracts or app code imported from it.
   capacity and cost (in the display currency) are computed for one employee-month on the way out;
   a value typed in any unit is converted back. Cost converts through that month's blended rate, so
   it cannot be entered for a month without any rate. Switching units never writes anything.
+- **Display rounding reconciles.** `roundForDisplay` (`apps/delivery/src/domain/rounding`) rounds
+  a grid of rows × months for display so that every total equals the sum of the figures it totals:
+  along a row, down a column (a group's row is the sum of its children) and overall. Each figure is
+  its exact value rounded down or up and the grand total is rounded to nearest. Totals and group
+  figures stay as close to exact as possible and leaf cells absorb the rest — on a single row that is
+  largest-remainder rounding. Values count as the decimals they are written as: 1.005 is exactly half
+  a cent, although binary floats store it just below.
 - The case study's reference calculation (A. Okafor, March 2026: 22 days, 176 h, 88 h, €7,880.00,
   blended €89.5455/h) is a test: `apps/delivery/src/domain/pricing.test.ts`.
 
