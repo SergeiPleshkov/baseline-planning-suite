@@ -1,0 +1,22 @@
+# One command: `docker compose up --build`, then open http://localhost:8080.
+# Only the shell's gateway is published; the remotes are reached through it.
+services:
+  shell:
+    build:
+      context: .
+      dockerfile: apps/shell/Dockerfile
+    ports:
+      - '8080:8080'
+    environment:
+      PEOPLE_REMOTE_ENTRY: ${PEOPLE_REMOTE_ENTRY:-/mf/people/mf-manifest.json}
+      DELIVERY_REMOTE_ENTRY: ${DELIVERY_REMOTE_ENTRY:-/mf/delivery/mf-manifest.json}
+
+  people:
+    build:
+      context: .
+      dockerfile: apps/people/Dockerfile
+
+  delivery:
+    build:
+      context: .
+      dockerfile: apps/delivery/Dockerfile

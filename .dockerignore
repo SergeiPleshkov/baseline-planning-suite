@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/coverage
+.git
+.claude
+CLAUDE.local.md
+IMPLEMENTATION_PLAN.md
+*.log
+.env
+.env.*

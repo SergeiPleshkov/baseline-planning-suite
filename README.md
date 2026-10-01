@@ -119,6 +119,7 @@ People's rules (`apps/people/src/domain`):
 | `seed/baseline-seed.json` | Fixtures shipped with the exercise. Ids and values are kept verbatim.   |
 | `tsconfig.base.json`      | Strict compiler settings every package extends.                         |
 | `eslint.config.js`        | Type-aware lint rules (`no-explicit-any`, hooks, team-boundary checks). |
+| `docker-compose.yml`      | The three containers; each app's `Dockerfile` sits in its folder.       |
 | `CLAUDE.md`, `.claude/`   | Project rules and guardrails for AI-assisted work with Claude Code.     |
 
 ## Development
@@ -136,11 +137,32 @@ pnpm build
 
 Each remote also runs on its own: open http://localhost:3001 or http://localhost:3002.
 
+## Running with Docker
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:8080. Three containers, one per deployable unit; only the shell's is published.
+
+- **shell** is nginx: it serves the shell and forwards `/mf/people/` and `/mf/delivery/` to the
+  remotes, so the browser sees one origin and no CORS is needed. Its `/config.json` is generated
+  when the container starts, from `PEOPLE_REMOTE_ENTRY` and `DELIVERY_REMOTE_ENTRY`.
+- **people** and **delivery** are nginx containers that serve their built bundle: the federated
+  remote at `/mf-manifest.json` and the standalone page at `/`, reachable as
+  http://localhost:8080/mf/people/ and http://localhost:8080/mf/delivery/.
+- Each image builds from the repository root, e.g. `docker build -f apps/people/Dockerfile .`, and
+  downloads packages in a layer that depends only on `pnpm-lock.yaml`.
+- The gateway looks its upstreams up on every request, so it starts and stays up while a remote is
+  down; only that remote's paths answer 502.
+
 ## Breaking a remote on purpose
 
 - In the shell header open **Diagnostics → Break People** (or Delivery). This adds
   `?break=people` to the URL; the shell then points that remote at an entry that does not exist,
   exactly like a missing deployment. The panel explains what failed, the other panel keeps working.
   **Restore all remotes** removes the parameter.
+- With Docker, `docker compose stop people` is a real outage: the panel shows what failed after
+  about two seconds, and `docker compose start people` followed by **Retry** brings it back.
 - Or stop a remote's dev server: its panel times out with a message; start the server again and
   press **Retry** — the remote loads without reloading the page.
