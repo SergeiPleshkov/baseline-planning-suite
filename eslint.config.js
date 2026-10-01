@@ -1,6 +1,8 @@
 // @ts-check
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
+import { createNodeResolver, importX } from 'eslint-plugin-import-x';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
@@ -12,7 +14,11 @@ export default defineConfig(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          // Build configs run in Node and belong to no app's tsconfig.
+          allowDefaultProject: ['apps/*/rsbuild.config.ts'],
+          defaultProject: 'tsconfig.base.json',
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -26,7 +32,32 @@ export default defineConfig(
     },
   },
   {
-    // Plain JS config files are not part of any TS project.
+    // Team boundaries: a package may reach another package only through its published name
+    // (in practice: a contract), never by a relative path into its source.
+    plugins: { 'import-x': importX },
+    settings: {
+      'import-x/resolver-next': [createNodeResolver({ extensions: ['.ts', '.tsx', '.js'] })],
+    },
+    rules: {
+      'import-x/no-relative-packages': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^@baseline/(?!.+-contract$)',
+              message: 'Only @baseline/*-contract packages may cross a team boundary.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/**/*.tsx'],
+    extends: [reactHooks.configs.flat['recommended-latest']],
+  },
+  {
     files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     extends: [tseslint.configs.disableTypeChecked],
   },

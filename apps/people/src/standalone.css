@@ -1,0 +1,7 @@
+/* Page-level styles for standalone mode only; hosted, the shell owns the page. */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: #16191d;
+  background: #fafaf8;
+}

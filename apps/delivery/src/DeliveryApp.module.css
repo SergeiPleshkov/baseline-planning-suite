@@ -1,0 +1,22 @@
+.app {
+  padding: 16px 24px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.context {
+  margin: 0;
+  color: #5a6472;
+  font-size: 13px;
+}

@@ -1,0 +1,26 @@
+.loading {
+  align-self: start;
+  padding: 16px 24px;
+  color: #5a6472;
+}
+
+.unavailable {
+  align-self: start;
+  margin: 16px 24px;
+  padding: 16px;
+  border: 1px solid #e3b3ad;
+  border-radius: 4px;
+  background: #fdf3f2;
+}
+
+.reason {
+  margin: 8px 0 4px;
+}
+
+.entry {
+  margin: 0 0 12px;
+  color: #5a6472;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}

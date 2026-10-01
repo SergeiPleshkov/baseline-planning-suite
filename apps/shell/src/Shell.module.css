@@ -1,0 +1,78 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 10px 24px;
+  border-bottom: 1px solid #d9dee5;
+  background: #ffffff;
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.nav {
+  display: flex;
+  gap: 14px;
+}
+
+.nav a {
+  color: #17456e;
+  text-decoration: none;
+}
+
+.nav a[aria-current='page'] {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.diagnostics {
+  margin-left: auto;
+  position: relative;
+  font-size: 13px;
+}
+
+.diagnostics ul {
+  position: absolute;
+  right: 0;
+  z-index: 1;
+  margin: 6px 0 0;
+  padding: 8px 16px;
+  list-style: none;
+  border: 1px solid #d9dee5;
+  background: #ffffff;
+  white-space: nowrap;
+}
+
+.outage {
+  color: #a33a2c;
+}
+
+.single {
+  flex: 1;
+}
+
+.sideBySide {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.sideBySide > * + * {
+  border-left: 1px solid #d9dee5;
+}

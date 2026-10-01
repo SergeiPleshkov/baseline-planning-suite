@@ -1,0 +1,16 @@
+{
+  "remotes": {
+    "people": "http://localhost:3001/mf-manifest.json",
+    "delivery": "http://localhost:3002/mf-manifest.json"
+  },
+  "currencies": [
+    { "code": "EUR", "ratePerEur": 1 },
+    { "code": "USD", "ratePerEur": 1.17 },
+    { "code": "GBP", "ratePerEur": 0.86 }
+  ],
+  "users": [
+    { "id": "lukas.fischer", "displayName": "Lukas Fischer" },
+    { "id": "marta.zielinska", "displayName": "Marta Zielinska" },
+    { "id": "tobias.reinhardt", "displayName": "Tobias Reinhardt" }
+  ]
+}
