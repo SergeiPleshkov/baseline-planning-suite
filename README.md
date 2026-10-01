@@ -51,6 +51,18 @@ lint rejects React, contracts or app code imported from it.
   figures stay as close to exact as possible and leaf cells absorb the rest — on a single row that is
   largest-remainder rounding. Values count as the decimals they are written as: 1.005 is exactly half
   a cent, although binary floats store it just below.
+- **The work breakdown** nests at most three levels deep within one project; a parent's figures
+  are derived from its children. Adding a child to a leaf that holds allocations moves them onto the
+  new child instead of dropping them. Moving an item under such a leaf is refused: the arriving item
+  may be a parent, or hold its own allocations for the same people and months, so the leaf's
+  allocations would have nowhere to go. Deleting an item takes its subtree and their allocations;
+  the user confirms a summary first, and if anything in it changed meanwhile nothing is deleted.
+- **Allocations** sit on leaves, inside their project's months, one per person, item and month;
+  setting one to zero removes it. A changed amount takes a revision above every current one, which
+  orders edits for the capacity check below.
+- **Capacity is cross-project.** A person's load in a month is the sum of their allocations on every
+  project. Above one person-month (100 %) they are over capacity, and the cause is the most recently
+  edited allocation that contributes. Over-allocation is flagged, never blocked.
 - The case study's reference calculation (A. Okafor, March 2026: 22 days, 176 h, 88 h, €7,880.00,
   blended €89.5455/h) is a test: `apps/delivery/src/domain/pricing.test.ts`.
 
