@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
   "include": ["src/domain"],
-  "exclude": ["src/domain/**/*.test.ts"]
+  "exclude": ["src/domain/**/*.test.ts", "src/domain/**/*.fixtures.ts"]
 }
