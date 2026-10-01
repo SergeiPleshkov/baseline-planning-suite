@@ -56,6 +56,10 @@ describe('cost input', () => {
 const closeTo = (actual: number, expected: number) =>
   Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected));
 
+// fc.double is uniform over bit patterns, so most of its values are vanishingly small;
+// realistic figures are uniform over the range instead.
+const upTo = (max: number) => fc.integer({ min: 0, max: max * 1e6 }).map((n) => n / 1e6);
+
 const anyContext = fc
   .record({
     year: fc.integer({ min: 2024, max: 2028 }),
@@ -91,7 +95,7 @@ describe('unit conversions', () => {
   it('leave a stored value unchanged after a round trip through any unit', () => {
     fc.assert(
       fc.property(
-        fc.double({ min: 0, max: 3, noNaN: true }),
+        upTo(3),
         fc.constantFrom(...DISPLAY_UNITS),
         anyContext,
         (personMonths, unit, context) => {
@@ -106,7 +110,7 @@ describe('unit conversions', () => {
   it('show an entered value back exactly as entered', () => {
     fc.assert(
       fc.property(
-        fc.double({ min: 0, max: 50_000, noNaN: true }),
+        upTo(50_000),
         fc.constantFrom(...DISPLAY_UNITS),
         anyContext,
         (entered, unit, context) => {
