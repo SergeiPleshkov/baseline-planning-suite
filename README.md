@@ -28,11 +28,36 @@ shell (host, :3000) ── reads /config.json at start-up ──► registers re
 - **Team boundaries are linted.** Packages reach each other only through `@baseline/*-contract`
   packages; relative imports into another package fail `pnpm lint`.
 
+## Contracts
+
+Teams meet only in `contracts/*`: zod schemas, the types inferred from them and a description of
+what the data means, with no behaviour. A consumer validates what it receives and maps it into its
+own model; TypeScript types alone would not protect two apps that are deployed independently and
+whose versions can drift.
+
+- **`@baseline/host-contract`** — display currency and active user, passed by the shell to every
+  remote and checked by version number.
+- **`@baseline/people-contract`** — employees, rate records and the `rates-changed` event. A rate
+  applies from its `validFrom` (inclusive) until the day before the employee's next record; before
+  the first there is none; at most one record per day. It also ships `rateSemanticsVectors`: worked
+  examples that People and Delivery each run against their own reading of the rules, so a
+  disagreement fails a test instead of mispricing an allocation.
+- **`@baseline/delivery-contract`** — workload per employee-month, either within capacity or over
+  it with the allocation to blame, and the `workload-changed` event.
+- The contracts define events as notifications: they say who changed and the consumer re-reads the
+  data. Adding an optional field keeps v1, and so does a new event type, since a consumer dispatches
+  on the SSE event name; consumers ignore fields they do not know. A change of meaning is a new
+  version.
+- Delivery reads People's payloads in one place, `apps/delivery/src/infrastructure/peopleContract.ts`.
+  A rate history that parses but contradicts itself (two records on one day) is refused as a whole:
+  there is no right answer to price the person's days with. So is a payload that uses an id twice.
+
 ## Domain rules
 
 Calculation logic lives in `apps/delivery/src/domain` as plain TypeScript and is tested without a
 browser. That folder compiles against its own `tsconfig.domain.json` (no DOM, no Node types), and
-lint rejects React, contracts or app code imported from it.
+lint rejects React, contracts or app code imported from it. `apps/people/src/domain` follows the
+same rules for the rate history and the register search, listed at the end of this section.
 
 - **Working days** are Monday to Friday; public holidays are ignored.
 - **Rates are effective-dated.** A rate applies from its `validFrom` (inclusive) until the next one;
@@ -66,6 +91,21 @@ lint rejects React, contracts or app code imported from it.
 - The case study's reference calculation (A. Okafor, March 2026: 22 days, 176 h, 88 h, €7,880.00,
   blended €89.5455/h) is a test: `apps/delivery/src/domain/pricing.test.ts`.
 
+People's rules (`apps/people/src/domain`):
+
+- **Rate history.** Records can be added, corrected and removed at any date, backdated ones
+  included. An employee has at most one record per `validFrom`, and a rate is positive, at most €10,000
+  an hour, with at most two decimals: 1.005 is refused, not rounded to a rate nobody entered. The
+  contract applies the same rule, and a test keeps the two in step.
+- **Effective periods** run from a record's `validFrom` to the day before the next one (inclusive);
+  the last has no end.
+- **The only record is not removed** by `removeRate`: the employee would have no rate at all, and
+  their days would cost nothing and be reported as unpriced. `clearRates` does that on purpose.
+  Removing the first of several does the same to the days before the next record.
+- **Search** matches every word of the query against name and role together, ignoring case and
+  accents (and folding letters like ł and ø); a blank query matches everyone. Results keep register
+  order.
+
 ## Repository
 
 | Path                      | What it is                                                              |
@@ -74,6 +114,8 @@ lint rejects React, contracts or app code imported from it.
 | `apps/people`             | Remote: the employee register (team People).                            |
 | `apps/delivery`           | Remote: work breakdown and staffing grid (team Delivery).               |
 | `contracts/host`          | Host contract v1 — what the shell pushes into every remote.             |
+| `contracts/people`        | People contract v1 — employees, rates, rate semantics and test vectors. |
+| `contracts/delivery`      | Delivery contract v1 — workload per employee-month.                     |
 | `seed/baseline-seed.json` | Fixtures shipped with the exercise. Ids and values are kept verbatim.   |
 | `tsconfig.base.json`      | Strict compiler settings every package extends.                         |
 | `eslint.config.js`        | Type-aware lint rules (`no-explicit-any`, hooks, team-boundary checks). |

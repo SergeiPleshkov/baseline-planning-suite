@@ -76,6 +76,12 @@ export default defineConfig(
               except: ['./domain'],
               message: 'Domain code must not import application, UI or infrastructure code.',
             },
+            {
+              target: './apps/people/src/domain',
+              from: './apps/people/src',
+              except: ['./domain'],
+              message: 'Domain code must not import application, UI or infrastructure code.',
+            },
           ],
         },
       ],
