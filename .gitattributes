@@ -1,0 +1,7 @@
+# LF everywhere: shell scripts and configs end up in Linux containers.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

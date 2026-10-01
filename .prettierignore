@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+dist
+coverage
+# Fixtures ship with the exercise and are kept byte-for-byte.
+seed
