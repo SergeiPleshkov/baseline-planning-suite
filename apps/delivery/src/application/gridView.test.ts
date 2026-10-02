@@ -9,6 +9,7 @@ import { DISPLAY_UNITS, type DisplayUnit } from '../domain/units';
 import type { StaffMember } from '../infrastructure/peopleContract';
 import {
   buildGrid,
+  conversionFor,
   projectHorizon,
   REPORTING_YEAR,
   shiftHorizon,
@@ -60,6 +61,7 @@ function input(plan: Plan, overrides: Partial<GridInput> = {}): GridInput {
     currencyPerEur: 1,
     staff: STAFF,
     rates: RATES,
+    assigned: [],
     ...overrides,
   };
 }
@@ -275,6 +277,83 @@ describe('buildGrid', () => {
     const hours = lineFor(gridOf(plan, { unit: 'hours' }), 'review', 'emp-004').cells[1];
     expect(cost?.steps).toBe(0);
     expect(hours?.steps).toBe(88 * 100);
+  });
+});
+
+describe('assigned people', () => {
+  const assign = (item: string, employee: string) => ({
+    item: breakdownItemId(item),
+    employee: employeeId(employee),
+  });
+
+  it('get an empty row on their leaf, in name order with the people who have allocations', () => {
+    const grid = gridOf(testPlan(), { assigned: [assign('review', 'emp-002')] });
+    const row = lineFor(grid, 'review', 'emp-002');
+    expect(row).toMatchObject({ kind: 'person', name: 'Lena Okafor', total: 0 });
+    expect(row.cells.every((cell) => cell.allocation === null && cell.steps === 0)).toBe(true);
+    expect(lineFor(grid, 'review')).toMatchObject({ hasChildren: true });
+
+    const both = gridOf(testPlan(), {
+      assigned: [assign('design', 'emp-001'), assign('design', 'emp-003')],
+    });
+    const names = both.lines.flatMap((line) =>
+      line.kind === 'person' && line.item.id === 'design' ? [line.name] : [],
+    );
+    expect(names).toEqual(['Adaeze Okafor', 'Mira Brandt']);
+  });
+
+  it('do not appear twice once they hold an allocation, and need no register entry for hours', () => {
+    const grid = gridOf(testPlan(), {
+      assigned: [assign('design', 'emp-003'), assign('review', 'emp-099')],
+      unit: 'hours',
+    });
+    expect(
+      grid.lines.filter((line) => line.kind === 'person' && line.item.id === 'design'),
+    ).toHaveLength(1);
+    expect(lineFor(grid, 'design', 'emp-003').cells.some((cell) => cell.allocation !== null)).toBe(
+      true,
+    );
+    expect(lineFor(grid, 'review', 'emp-099')).toMatchObject({ name: 'emp-099' });
+  });
+
+  it('are ignored on an item that has children', () => {
+    const grid = gridOf(testPlan(), { assigned: [assign('discovery', 'emp-001')] });
+    expect(grid.lines.some((line) => line.kind === 'person' && line.item.id === 'discovery')).toBe(
+      false,
+    );
+  });
+
+  it('leave the figures as they were', () => {
+    const plain = gridOf(testPlan());
+    const assigned = gridOf(testPlan(), { assigned: [assign('review', 'emp-002')] });
+    expect(assigned.totals).toEqual(plain.totals);
+  });
+});
+
+describe('conversionFor', () => {
+  const context = { staff: STAFF, rates: RATES, currencyPerEur: 1.17 };
+
+  it('prices the person’s own month', () => {
+    const conversion = conversionFor(employeeId('emp-001'), yearMonth('2026-03'), context);
+    expect(conversion?.pricing.hoursPerPersonMonth).toBe(176);
+    expect(conversion?.pricing.blendedRateEur).toBeCloseTo(89.5455, 4);
+    expect(conversion?.currencyPerEur).toBe(1.17);
+  });
+
+  it('is nothing for someone the register does not know, or while it cannot be read', () => {
+    expect(conversionFor(employeeId('emp-099'), yearMonth('2026-03'), context)).toBeNull();
+    expect(
+      conversionFor(employeeId('emp-001'), yearMonth('2026-03'), { ...context, staff: null }),
+    ).toBeNull();
+  });
+
+  it('converts hours without rates, with a blended rate of zero', () => {
+    const conversion = conversionFor(employeeId('emp-001'), yearMonth('2026-03'), {
+      ...context,
+      rates: null,
+    });
+    expect(conversion?.pricing.hoursPerPersonMonth).toBe(176);
+    expect(conversion?.pricing.blendedRateEur).toBe(0);
   });
 });
 

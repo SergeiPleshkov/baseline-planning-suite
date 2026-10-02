@@ -1,7 +1,9 @@
+import type { SetAllocationError } from '../domain/allocations';
 import type { AddItemError, MoveItemError } from '../domain/breakdown';
+import { MAX_ALLOCATION_PERSON_MONTHS } from '../domain/plan';
 
 export type TreeCommandError =
-  AddItemError | MoveItemError | 'blank-name' | 'changed-since-confirmation';
+  AddItemError | MoveItemError | SetAllocationError | 'blank-name' | 'changed-since-confirmation';
 
 /** What the person is told when the domain refuses a command before it is even sent. */
 const MESSAGES = {
@@ -17,6 +19,9 @@ const MESSAGES = {
     'That item holds allocations, so nothing can be moved under it. Add a new child to it instead: its allocations move onto the child.',
   'changed-since-confirmation':
     'The item changed since the summary was shown. Review it again before deleting.',
+  'invalid-amount': `An allocation is between 0 and ${String(MAX_ALLOCATION_PERSON_MONTHS)} person-months.`,
+  'not-a-leaf': 'Allocations sit on the lowest level of the breakdown.',
+  'outside-project': 'That month is outside the project.',
 } as const satisfies Record<TreeCommandError, string>;
 
 export const messageFor = (error: TreeCommandError): string => MESSAGES[error];

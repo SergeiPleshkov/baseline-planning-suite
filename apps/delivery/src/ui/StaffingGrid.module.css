@@ -124,3 +124,27 @@
   border: 1px solid #c4cad3;
   border-radius: 3px;
 }
+
+.entry {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 56px;
+  padding: 2px 4px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  border: 2px solid #1a56c4;
+  border-radius: 3px;
+}
+
+.entry[aria-invalid='true'] {
+  border-color: #8c1d18;
+}
+
+.entryError {
+  margin: 0;
+  padding: 6px 8px;
+  color: #8c1d18;
+  background: #fdeceb;
+  font-size: 13px;
+}

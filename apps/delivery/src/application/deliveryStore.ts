@@ -1,5 +1,12 @@
+import { setAllocation, type AllocationCell } from '../domain/allocations';
 import { addItem, deleteItem, moveItem, renameItem } from '../domain/breakdown';
-import { allocationId, breakdownItemId, type BreakdownItemId, type ProjectId } from '../domain/ids';
+import {
+  allocationId,
+  breakdownItemId,
+  type AllocationId,
+  type BreakdownItemId,
+  type ProjectId,
+} from '../domain/ids';
 import type { Plan } from '../domain/plan';
 import type { Result } from '../domain/result';
 import { messageFor, movedAllocationsNotice, type TreeCommandError } from './messages';
@@ -47,6 +54,8 @@ export interface DeliveryStore {
     item: BreakdownItemId,
   ) => Promise<{ readonly ok: true; readonly summary: DeletionSummaryDto } | Refusal>;
   deleteItem: (summary: DeletionSummaryDto) => Promise<CommandOutcome>;
+  /** Zero removes the allocation; an amount equal to the stored one changes nothing. */
+  setAllocation: (cell: AllocationCell, personMonths: number) => Promise<CommandOutcome>;
 }
 
 /** A sentence for the screen; what exactly went wrong goes to the console. */
@@ -67,6 +76,12 @@ function unusedId(plan: Plan): BreakdownItemId {
   let candidate = 'pending-item';
   while (plan.items.has(breakdownItemId(candidate))) candidate += '_';
   return breakdownItemId(candidate);
+}
+
+function unusedAllocationId(plan: Plan): AllocationId {
+  let candidate = 'pending-allocation';
+  while (plan.allocations.has(allocationId(candidate))) candidate += '_';
+  return allocationId(candidate);
 }
 
 export function createDeliveryStore(gateway: DeliveryGateway): DeliveryStore {
@@ -233,6 +248,13 @@ export function createDeliveryStore(gateway: DeliveryGateway): DeliveryStore {
             })),
           }),
         () => gateway.deleteItem(summary),
+      ),
+
+    setAllocation: (cell, personMonths) =>
+      change(
+        // The service names a new allocation; the id here only has to be one the plan does not use.
+        (plan) => setAllocation(plan, cell, personMonths, unusedAllocationId(plan)),
+        () => gateway.setAllocation(cell, personMonths),
       ),
   };
 }

@@ -46,7 +46,7 @@ export function createDeliveryGateway(options: {
       return {
         ok: false,
         message: changes
-          ? 'The Delivery service did not answer. The change may not have been saved; close this window to see what the service holds.'
+          ? 'The Delivery service did not answer. The change may not have been saved; the plan is read again to show what the service holds.'
           : 'The Delivery service did not answer.',
       };
     }
@@ -96,6 +96,11 @@ export function createDeliveryGateway(options: {
 
     async deleteItem(summary: DeletionSummaryDto) {
       const sent = await send('POST', `/items/${enc(summary.root)}/deletion`, summary);
+      return sent.ok ? { ok: true } : sent;
+    },
+
+    async setAllocation(cell, personMonths) {
+      const sent = await send('PUT', '/allocations', { ...cell, personMonths });
       return sent.ok ? { ok: true } : sent;
     },
   };

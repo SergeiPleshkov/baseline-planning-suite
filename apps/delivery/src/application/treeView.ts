@@ -145,6 +145,23 @@ export function moveTargets(plan: Plan, id: BreakdownItemId): MoveTarget[] {
     }));
 }
 
+export interface LeafOption {
+  readonly id: BreakdownItemId;
+  readonly label: string;
+}
+
+/** The items of a project that hold allocations, because they have no children, in tree order. */
+export function leafOptions(plan: Plan, project: ProjectId): LeafOption[] {
+  const leaves: LeafOption[] = [];
+  const visit = (item: BreakdownItem) => {
+    const children = childrenOf(plan, item.id);
+    if (children.length === 0) leaves.push({ id: item.id, label: pathOf(plan, item.id) });
+    for (const child of children) visit(child);
+  };
+  for (const root of topLevelOf(plan, project)) visit(root);
+  return leaves;
+}
+
 /** The collapsed set with every ancestor of the item opened, so that the item is visible. */
 export function expandPathTo(
   plan: Plan,

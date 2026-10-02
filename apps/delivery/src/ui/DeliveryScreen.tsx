@@ -194,6 +194,7 @@ export function DeliveryScreen({ store, staff, currency }: Props) {
           key={project.id}
           plan={plan}
           project={project}
+          store={store}
           staff={staff}
           currency={currency}
         />

@@ -67,6 +67,29 @@ describe('commands', () => {
     });
   });
 
+  it('puts an allocation with the cell and the amount, and hands back the service’s refusal', async () => {
+    const cell = { breakdownItemId: 'a/b', employeeId: 'e 1', month: '2026-05' };
+    const { fetchImpl, requests } = recorder(() => json({ revision: 4, allocation: null }));
+    const gateway = createDeliveryGateway({ baseUrl: '/api/delivery/v1', fetch: fetchImpl });
+    expect(await gateway.setAllocation(cell, 0.4)).toEqual({ ok: true });
+    expect(requests[0]?.init?.method).toBe('PUT');
+    expect(requests[0]?.url).toBe('/api/delivery/v1/allocations');
+    const body = requests[0]?.init?.body;
+    expect(typeof body === 'string' ? JSON.parse(body) : null).toEqual({
+      ...cell,
+      personMonths: 0.4,
+    });
+
+    const refusing = createDeliveryGateway({
+      baseUrl: '/x',
+      fetch: () => json({ error: { message: 'That month is outside the project.' } }, 409),
+    });
+    expect(await refusing.setAllocation(cell, 0.4)).toEqual({
+      ok: false,
+      message: 'That month is outside the project.',
+    });
+  });
+
   it('hands back the new item and how many allocations moved onto it', async () => {
     const gateway = createDeliveryGateway({
       baseUrl: '/x',

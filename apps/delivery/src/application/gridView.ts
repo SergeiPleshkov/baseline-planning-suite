@@ -10,7 +10,13 @@ import {
 import { priceMonth, type MonthPricing } from '../domain/pricing';
 import { rateTimeline, type RateTimeline } from '../domain/rateTimeline';
 import { roundForDisplay, type GridRow } from '../domain/rounding/roundForDisplay';
-import { isPlainUnit, toDisplayUnit, toPlainUnit, type DisplayUnit } from '../domain/units';
+import {
+  isPlainUnit,
+  toDisplayUnit,
+  toPlainUnit,
+  type ConversionContext,
+  type DisplayUnit,
+} from '../domain/units';
 import type { StaffMember } from '../infrastructure/peopleContract';
 import { DISPLAY_DECIMALS } from './figures';
 import { topLevelOf } from './treeView';
@@ -85,13 +91,20 @@ export interface GridInput {
   /** `null` while People cannot be read. */
   readonly staff: ReadonlyMap<EmployeeId, StaffMember> | null;
   readonly rates: ReadonlyMap<EmployeeId, RateTimeline> | null;
+  /** People given a row on a leaf before they have any allocation there. */
+  readonly assigned: readonly Assignment[];
+}
+
+export interface Assignment {
+  readonly item: BreakdownItemId;
+  readonly employee: EmployeeId;
 }
 
 export type GridBuild =
   | { readonly status: 'ready'; readonly grid: Grid }
   | { readonly status: 'unavailable'; readonly message: string };
 
-const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+export const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 type AllocationIndex = ReadonlyMap<
   BreakdownItemId,
@@ -156,8 +169,25 @@ type GridNode = ItemNode | PersonNode;
 
 const ROOT_KEY = JSON.stringify(['project']);
 const itemKey = (id: BreakdownItemId): string => JSON.stringify(['item', id]);
-const personKey = (item: BreakdownItemId, employee: EmployeeId): string =>
+export const personKey = (item: BreakdownItemId, employee: EmployeeId): string =>
   JSON.stringify(['person', item, employee]);
+
+/**
+ * What converts a figure typed for one person in one month, or `null` if the register has no
+ * record of the person. Without rates the month converts hours, not money.
+ */
+export function conversionFor(
+  employee: EmployeeId,
+  month: YearMonth,
+  { staff, rates, currencyPerEur }: Pick<GridInput, 'staff' | 'rates' | 'currencyPerEur'>,
+): ConversionContext | null {
+  const member = staff?.get(employee);
+  if (!member) return null;
+  return {
+    pricing: priceMonth(month, member.weeklyHours, rates?.get(employee) ?? rateTimeline([])),
+    currencyPerEur,
+  };
+}
 
 /**
  * The staffing grid of one project over a horizon, in one unit: the breakdown with the people
@@ -197,8 +227,12 @@ export function buildGrid(input: GridInput): GridBuild {
     item: BreakdownItem,
     depth: number,
     ancestors: readonly BreakdownItemId[],
-  ): PersonNode[] =>
-    [...(index.get(item.id) ?? [])]
+  ): PersonNode[] => {
+    const planned = new Map<EmployeeId, ReadonlyMap<YearMonth, Allocation>>(index.get(item.id));
+    for (const { item: on, employee } of input.assigned) {
+      if (on === item.id && !planned.has(employee)) planned.set(employee, new Map());
+    }
+    return [...planned]
       .map(([employeeId, byMonth]) => ({ employeeId, byMonth, name: nameOf(employeeId) }))
       .sort((a, b) => byText(a.name, b.name) || byText(a.employeeId, b.employeeId))
       .map(({ employeeId, byMonth, name }) => {
@@ -218,6 +252,7 @@ export function buildGrid(input: GridInput): GridBuild {
           }),
         };
       });
+  };
 
   const itemNode = (
     item: BreakdownItem,

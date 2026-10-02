@@ -7,6 +7,7 @@ import {
   canHaveChildren,
   expandPathTo,
   isAncestor,
+  leafOptions,
   moveTargets,
   nextTreeAction,
   pathOf,
@@ -190,6 +191,21 @@ describe('moveTargets order', () => {
       'migration › docs',
       'handover',
     ]);
+  });
+});
+
+describe('leafOptions', () => {
+  it('lists the items without children in tree order, by their path', () => {
+    expect(leafOptions(testPlan(), ledger)).toEqual([
+      { id: 'design', label: 'migration › discovery › design' },
+      { id: 'review', label: 'migration › discovery › review' },
+      { id: 'docs', label: 'handover › docs' },
+      { id: 'cutover', label: 'cutover' },
+    ]);
+  });
+
+  it('keeps projects apart', () => {
+    expect(leafOptions(testPlan(), portal).map((leaf) => leaf.id)).toEqual(['build']);
   });
 });
 

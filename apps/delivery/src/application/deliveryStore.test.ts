@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { breakdownItemId, projectId } from '../domain/ids';
+import { yearMonth } from '../domain/calendar';
+import { breakdownItemId, employeeId, projectId } from '../domain/ids';
 import { testPlan } from '../domain/plan.fixtures';
 import { createDeliveryService } from './deliveryService';
 import { createDeliveryStore, type DeliveryStore } from './deliveryStore';
@@ -56,6 +57,15 @@ function setup() {
       if (hooks.refuse) return { ok: false, message: hooks.refuse };
       const deleted = await service.deleteItem(summary.root, summary);
       return deleted.ok ? { ok: true } : { ok: false, message: deleted.error };
+    },
+    setAllocation: async (cell, personMonths) => {
+      sent.push(
+        `set ${cell.breakdownItemId} ${cell.employeeId} ${cell.month} ${String(personMonths)}`,
+      );
+      await hooks.hold;
+      if (hooks.refuse) return { ok: false, message: hooks.refuse };
+      const set = await service.setAllocation(cell, personMonths);
+      return set.ok ? { ok: true } : { ok: false, message: set.error };
     },
   };
   return { store: createDeliveryStore(gateway), service, gateway, sent, hooks };
@@ -410,6 +420,118 @@ describe('deleting', () => {
     const { store } = setup();
     await store.load();
     expect(await store.deletionSummary(id('nope'))).toEqual({ ok: false, message: 'unknown item' });
+  });
+});
+
+describe('setAllocation', () => {
+  const cell = (item: string, employee: string, month: string) => ({
+    breakdownItemId: id(item),
+    employeeId: employeeId(employee),
+    month: yearMonth(month),
+  });
+  const amountOf = (store: DeliveryStore, item: string, employee: string, month: string) => {
+    const { plan } = store.getSnapshot();
+    if (plan.status !== 'ready') throw new Error('not ready');
+    return [...plan.plan.allocations.values()].find(
+      (each) =>
+        each.breakdownItemId === item && each.employeeId === employee && each.month === month,
+    )?.personMonths;
+  };
+
+  it('shows a new allocation at once and keeps it once the service agrees', async () => {
+    const { store, hooks, sent } = setup();
+    await store.load();
+    const gate = deferred();
+    hooks.hold = gate.promise;
+    const pending = store.setAllocation(cell('review', 'emp-002', '2026-05'), 0.4);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(amountOf(store, 'review', 'emp-002', '2026-05')).toBe(0.4);
+    const { plan } = store.getSnapshot();
+    expect(plan.status === 'ready' && plan.saving).toBe(true);
+
+    gate.release();
+    expect(await pending).toEqual({ ok: true });
+    expect(amountOf(store, 'review', 'emp-002', '2026-05')).toBe(0.4);
+    expect(sent).toEqual(['set review emp-002 2026-05 0.4']);
+  });
+
+  it('changes an amount and removes it with zero', async () => {
+    const { store } = setup();
+    await store.load();
+    await store.setAllocation(cell('design', 'emp-003', '2026-06'), 0.25);
+    expect(amountOf(store, 'design', 'emp-003', '2026-06')).toBe(0.25);
+    await store.setAllocation(cell('design', 'emp-003', '2026-06'), 0);
+    expect(amountOf(store, 'design', 'emp-003', '2026-06')).toBeUndefined();
+  });
+
+  it('sends nothing when the amount is the one already stored', async () => {
+    const { store, sent } = setup();
+    await store.load();
+    expect(await store.setAllocation(cell('design', 'emp-003', '2026-06'), 0.59)).toEqual({
+      ok: true,
+    });
+    expect(await store.setAllocation(cell('review', 'emp-002', '2026-05'), 0)).toEqual({
+      ok: true,
+    });
+    expect(sent).toEqual([]);
+  });
+
+  it('refuses what the domain refuses, before sending anything', async () => {
+    const { store, sent } = setup();
+    await store.load();
+    expect(await store.setAllocation(cell('review', 'emp-002', '2026-05'), 101)).toEqual({
+      ok: false,
+      message: 'An allocation is between 0 and 100 person-months.',
+    });
+    expect(await store.setAllocation(cell('review', 'emp-002', '2025-01'), 0.5)).toEqual({
+      ok: false,
+      message: 'That month is outside the project.',
+    });
+    expect(await store.setAllocation(cell('discovery', 'emp-002', '2026-05'), 0.5)).toEqual({
+      ok: false,
+      message: 'Allocations sit on the lowest level of the breakdown.',
+    });
+    expect(sent).toEqual([]);
+  });
+
+  it('takes the allocation back when the service refuses, with its words', async () => {
+    const { store, hooks } = setup();
+    await store.load();
+    hooks.refuse = 'Not today.';
+    expect(await store.setAllocation(cell('review', 'emp-002', '2026-05'), 0.4)).toEqual({
+      ok: false,
+      message: 'Not today.',
+    });
+    expect(amountOf(store, 'review', 'emp-002', '2026-05')).toBeUndefined();
+  });
+
+  it('does not send a second edit until the first has been answered', async () => {
+    const { store, hooks, sent } = setup();
+    await store.load();
+    const gate = deferred();
+    hooks.hold = gate.promise;
+    const first = store.setAllocation(cell('review', 'emp-002', '2026-05'), 0.4);
+    const second = store.setAllocation(cell('review', 'emp-002', '2026-05'), 0.7);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(sent).toEqual(['set review emp-002 2026-05 0.4']);
+    hooks.hold = undefined;
+    gate.release();
+    await Promise.all([first, second]);
+    expect(sent).toHaveLength(2);
+    expect(amountOf(store, 'review', 'emp-002', '2026-05')).toBe(0.7);
+  });
+
+  it('keeps the allocation, marked as possibly out of date, when it was saved but the plan cannot be read', async () => {
+    const { store, hooks } = setup();
+    await store.load();
+    hooks.failReads = true;
+    expect(await store.setAllocation(cell('review', 'emp-002', '2026-05'), 0.4)).toEqual({
+      ok: true,
+    });
+    const { plan } = store.getSnapshot();
+    expect(plan.status === 'ready' && plan.stale).not.toBeNull();
+    expect(amountOf(store, 'review', 'emp-002', '2026-05')).toBe(0.4);
   });
 });
 

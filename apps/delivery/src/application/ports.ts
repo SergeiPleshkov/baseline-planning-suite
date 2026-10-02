@@ -32,4 +32,9 @@ export interface DeliveryGateway {
     change: { readonly name?: string; readonly parentId?: string | null },
   ) => Promise<CommandResult>;
   deleteItem: (summary: DeletionSummaryDto) => Promise<CommandResult>;
+  /** Zero removes the allocation. */
+  setAllocation: (
+    cell: { readonly breakdownItemId: string; readonly employeeId: string; readonly month: string },
+    personMonths: number,
+  ) => Promise<CommandResult>;
 }

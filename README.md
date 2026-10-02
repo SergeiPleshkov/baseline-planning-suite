@@ -244,12 +244,23 @@ The Staffing view of the same project: the work breakdown as rows, with the peop
 each leaf below it, one column per month and a total column and row. It is an ARIA treegrid: one
 tab stop, the arrow keys move between cells (Home and End go to the ends of a row, with Ctrl to the
 corners; combinations with Alt, Shift or Cmd are left to the browser), and Enter or Space on an
-item's name opens or closes it. It shows allocations; it does
-not edit them yet.
+item's name opens or closes it.
 
 - **Rows.** A breakdown row's figures are sums of what is below it and are marked DERIVED. A person
-  gets a row under a leaf once they have an allocation on it, listed by name and then id. Months
+  gets a row under a leaf once they have an allocation on it, or are assigned to it, listed by
+  name and then id. Months
   outside the project's dates are shaded and empty.
+- **Editing.** A person's cell inside the project is edited in place. Enter or F2 opens it on its
+  text, a digit starts a new figure, Delete clears it; Enter saves and moves down, Tab saves and
+  moves along (Shift+Tab back), Escape drops the text. Zero or blank removes the allocation. A
+  figure is read in the unit shown, with the grouping the cells use (`1,250` is 1250, `0,5` is
+  0.5) and converted to person-months for that person and month; money cannot be typed for a
+  month without a rate. A cell is saved only if the text differs from what it showed, so pressing
+  Enter on `0.33`, which displays an exact third, leaves the stored third alone. The change shows
+  at once and is read back from the service; a refusal is shown above the grid.
+- **Assigning.** "Assign person…" gives a person a row on a leaf before they have any allocation
+  there. The row exists in this view only and is not saved: it stays after its figures are
+  cleared, and is gone when the project is changed or the page is reloaded.
 - **Months.** The grid opens on the project's own span (Mar 26 – Feb 27 for Ledger Consolidation,
   so the reference cell is on screen). ‹ and › move it by a month; "Project span" and
   "Apr 26 – Mar 27" are presets. The totals cover the months shown.
