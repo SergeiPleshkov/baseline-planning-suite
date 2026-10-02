@@ -1,4 +1,4 @@
-import type { YearMonth } from './calendar';
+import { monthOf, type IsoDate, type MonthSpan, type YearMonth } from './calendar';
 import type { AllocationId, BreakdownItemId, EmployeeId, ProjectId } from './ids';
 
 export const MAX_DEPTH = 3;
@@ -9,8 +9,9 @@ export const MAX_ALLOCATION_PERSON_MONTHS = 100;
 export interface Project {
   readonly id: ProjectId;
   readonly name: string;
-  readonly firstMonth: YearMonth;
-  readonly lastMonth: YearMonth;
+  /** The first and the last day of the project, both included. */
+  readonly startDate: IsoDate;
+  readonly endDate: IsoDate;
 }
 
 export interface BreakdownItem {
@@ -44,6 +45,20 @@ interface PlanContents {
   readonly allocations: ReadonlyMap<AllocationId, Allocation>;
   readonly lastRevision: number;
 }
+
+/**
+ * The months that can be planned: every month the project runs on at least one day. Allocations
+ * are per month, so a project that starts on the 12th can be staffed for that whole month.
+ */
+export const projectMonths = (project: Project): MonthSpan => ({
+  first: monthOf(project.startDate),
+  last: monthOf(project.endDate),
+});
+
+export const isProjectMonth = (project: Project, month: YearMonth): boolean => {
+  const { first, last } = projectMonths(project);
+  return month >= first && month <= last;
+};
 
 export const isValidAllocationAmount = (personMonths: number): boolean =>
   Number.isFinite(personMonths) &&
@@ -106,7 +121,7 @@ export function createPlan(input: {
   const plan = contents as Plan;
 
   for (const project of plan.projects.values()) {
-    if (project.firstMonth > project.lastMonth) {
+    if (project.startDate > project.endDate) {
       throw new RangeError(`${project.id}: ends before it starts`);
     }
   }
@@ -134,7 +149,7 @@ export function createPlan(input: {
       throw new RangeError(`${allocation.id}: not on a leaf`);
     }
     const project = plan.projects.get(item.projectId);
-    if (!project || allocation.month < project.firstMonth || allocation.month > project.lastMonth) {
+    if (!project || !isProjectMonth(project, allocation.month)) {
       throw new RangeError(`${allocation.id}: outside its project's months`);
     }
     if (!isValidAllocationAmount(allocation.personMonths) || allocation.personMonths === 0) {

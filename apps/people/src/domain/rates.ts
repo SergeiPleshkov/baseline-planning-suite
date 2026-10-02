@@ -33,7 +33,7 @@ export const isValidHourlyRate = (rate: number): boolean =>
   Math.round(rate * 100) / 100 === rate;
 
 export function rateHistory(employeeId: EmployeeId, records: readonly RateRecord[]): RateHistory {
-  const sorted = [...records].sort((a, b) =>
+  const sorted = records.toSorted((a, b) =>
     a.validFrom < b.validFrom ? -1 : a.validFrom > b.validFrom ? 1 : 0,
   );
   const ids = new Set<RateId>();

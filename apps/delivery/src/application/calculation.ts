@@ -16,7 +16,6 @@ export interface CalculationInput {
   readonly month: YearMonth;
   readonly staff: ReadonlyMap<EmployeeId, StaffMember> | null;
   readonly rates: ReadonlyMap<EmployeeId, RateTimeline> | null;
-  /** Display currency per EUR. */
   readonly currencyPerEur: number;
 }
 

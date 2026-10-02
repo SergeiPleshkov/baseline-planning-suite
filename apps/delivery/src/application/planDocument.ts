@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { yearMonth } from '../domain/calendar';
+import { isoDate, yearMonth } from '../domain/calendar';
 import { allocationId, breakdownItemId, employeeId, projectId } from '../domain/ids';
 import { createPlan, type BreakdownItem, type Plan } from '../domain/plan';
 
@@ -9,8 +9,8 @@ export const Month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const ProjectSchema = z.object({
   id: Id,
   name: z.string(),
-  firstMonth: Month,
-  lastMonth: Month,
+  startDate: z.iso.date(),
+  endDate: z.iso.date(),
 });
 
 const ItemSchema = z.object({
@@ -65,8 +65,8 @@ export function stateFromDocument(input: unknown): PlanState {
       projects: document.projects.map((project) => ({
         id: projectId(project.id),
         name: project.name,
-        firstMonth: yearMonth(project.firstMonth),
-        lastMonth: yearMonth(project.lastMonth),
+        startDate: isoDate(project.startDate),
+        endDate: isoDate(project.endDate),
       })),
       items: document.items.map(itemFromDto),
       allocations: document.allocations.map((each) => ({
@@ -102,8 +102,8 @@ export const documentFromState = (state: PlanState): PlanDocument => ({
   projects: [...state.plan.projects.values()].map((project) => ({
     id: project.id,
     name: project.name,
-    firstMonth: project.firstMonth,
-    lastMonth: project.lastMonth,
+    startDate: project.startDate,
+    endDate: project.endDate,
   })),
   items: [...state.plan.items.values()].map(itemToDto),
   allocations: [...state.plan.allocations.values()].map((each) => ({

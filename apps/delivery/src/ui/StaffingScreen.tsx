@@ -7,21 +7,19 @@ import {
   buildGrid,
   conversionFor,
   personKey,
-  projectHorizon,
   REPORTING_YEAR,
   shiftHorizon,
   type Assignment,
   type GridCell,
-  type Horizon,
   type PersonLine,
 } from '../application/gridView';
 import { cellInProject, overloads, type OverloadEntry } from '../application/overload';
-import { byText } from '../application/sorting';
+import { byKey, byName } from '../application/sorting';
 import type { StaffStore } from '../application/staffStore';
 import { expandPathTo, leafOptions } from '../application/treeView';
-import type { YearMonth } from '../domain/calendar';
+import type { MonthSpan, YearMonth } from '../domain/calendar';
 import type { BreakdownItemId, EmployeeId } from '../domain/ids';
-import type { Plan, Project } from '../domain/plan';
+import { projectMonths, type Plan, type Project } from '../domain/plan';
 import { DISPLAY_UNITS, isPlainUnit, type DisplayUnit } from '../domain/units';
 import { AssignDialog } from './AssignDialog';
 import { formatMonth, formatMonthShort } from './format';
@@ -52,15 +50,16 @@ const unitLabel = (unit: DisplayUnit, currency: DisplayCurrency): string => {
   }
 };
 
-const rangeLabel = ({ first, last }: Horizon): string =>
+const rangeLabel = ({ first, last }: MonthSpan): string =>
   `${formatMonthShort(first)} – ${formatMonthShort(last)}`;
 
-const sameHorizon = (a: Horizon, b: Horizon): boolean => a.first === b.first && a.last === b.last;
+const sameHorizon = (a: MonthSpan, b: MonthSpan): boolean =>
+  a.first === b.first && a.last === b.last;
 
 export function StaffingScreen({ plan, project, store, staff, currency }: Props) {
   const people = useStaffView(staff);
   const [unit, setUnit] = useState<DisplayUnit>('personMonths');
-  const [chosen, setChosen] = useState<Horizon | null>(null);
+  const [chosen, setChosen] = useState<MonthSpan | null>(null);
   const [collapsed, setCollapsed] = useState<ReadonlySet<BreakdownItemId>>(new Set());
   const [retrying, setRetrying] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -74,7 +73,7 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
   // Text left in a cell that could not be saved, named by its cell; it goes with the next saved figure.
   const [dropped, setDropped] = useState<string | null>(null);
 
-  const ownSpan = useMemo(() => projectHorizon(project), [project]);
+  const ownSpan = useMemo(() => projectMonths(project), [project]);
   const horizon = chosen ?? ownSpan;
   const known = people.status === 'ready' ? people : null;
   const built = useMemo(
@@ -149,10 +148,10 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
         .filter((entry) => entry.contributions.some((each) => each.project.id === project.id))
         .sort(
           (a, b) =>
-            byText(
+            byName(
               known?.staff.get(a.employeeId)?.name ?? a.employeeId,
               known?.staff.get(b.employeeId)?.name ?? b.employeeId,
-            ) || byText(a.month, b.month),
+            ) || byKey(a.month, b.month),
         ),
     [plan, project, known],
   );
@@ -399,7 +398,7 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
           leaves={leafOptions(plan, project.id)}
           people={[...known.staff.values()]
             .map(({ id, name }) => ({ id, name }))
-            .sort((a, b) => byText(a.name, b.name))}
+            .sort((a, b) => byName(a.name, b.name))}
           onSubmit={assignPerson}
           onClose={() => {
             setAssigning(false);

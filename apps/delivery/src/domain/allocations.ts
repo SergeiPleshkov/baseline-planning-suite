@@ -3,6 +3,7 @@ import type { AllocationId, BreakdownItemId, EmployeeId } from './ids';
 import {
   cellKey,
   childrenOf,
+  isProjectMonth,
   isValidAllocationAmount,
   revise,
   type Allocation,
@@ -35,7 +36,7 @@ export function setAllocation(
   if (!item) return err('unknown-item');
   if (childrenOf(plan, item.id).length > 0) return err('not-a-leaf');
   const project = plan.projects.get(item.projectId);
-  if (!project || cell.month < project.firstMonth || cell.month > project.lastMonth) {
+  if (!project || !isProjectMonth(project, cell.month)) {
     return err('outside-project');
   }
 

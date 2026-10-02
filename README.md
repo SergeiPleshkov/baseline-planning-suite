@@ -102,8 +102,8 @@ shell (host, :3000) ── reads /config.json at start-up ──► registers re
 | `knip.json`               | Settings for `pnpm knip`: unused files, exports and dependencies.       |
 | `CLAUDE.md`, `.claude/`   | Project rules and guardrails for AI-assisted work with Claude Code.     |
 
-People and Delivery have the same layout under `src/`; the shell is small and keeps its dozen files
-flat.
+The three apps share one layout under `src/`. The shell has no rules of its own and no server, so it
+has only `infrastructure/` (runtime config, loading the remotes) and `ui/`.
 
 ```
 domain/           plain TypeScript, the rules: its own tsconfig, no DOM, no I/O, no contracts
@@ -111,7 +111,8 @@ application/      stores, view models and ports; no React, no fetch
 infrastructure/   gateways, change feeds, runtime config, mapping of contract data
 ui/               React components and their CSS Modules
 server/           Hono API, JSON store, event bus (bundled to dist-server/main.js)
-*App.tsx          the component exposed as ./App; index.tsx and bootstrap.tsx start it standalone
+*App.tsx          the app's root component: ShellApp, and the PeopleApp and DeliveryApp that
+                  the remotes expose as ./App; index.tsx and bootstrap.tsx start it
 ```
 
 ## Decisions
@@ -262,6 +263,9 @@ pnpm build
 
 Each remote also runs on its own: open http://localhost:3001 or http://localhost:3002.
 
+The bundles target Chrome and Edge 117, Firefox 119 and Safari 17.4 or later (`browserslist` in
+each app's `package.json`), the first versions with `Map.groupBy`; no polyfills are added.
+
 The servers run separately from the front ends. `pnpm --filter @baseline/people dev:server` and
 `pnpm --filter @baseline/delivery dev:server` start them on :3011 and :3012, importing the seed into
 `data/` the first time; delete that folder to start over. `pnpm build` also bundles each server
@@ -280,9 +284,10 @@ pnpm e2e        # Playwright, in e2e/
 - **Smoke** checks that the shell and `/config.json` are served with same-origin remote entries,
   that each manifest names its remote and its entry script loads, that People serves every employee
   of the seed and Delivery every project, and that both event streams deliver their first bytes at
-  once, which fails if something in front of them buffers. `--down=people` is for a stack where
-  that service was stopped on purpose: its paths must answer with a gateway error while everything
-  else stays healthy.
+  once, which fails if something in front of them buffers, and that a page on another origin is
+  not allowed to write to either API. `--down=people` is for a stack where that service was
+  stopped on purpose: its paths must answer with a gateway error while everything else stays
+  healthy.
 - **Browser tests** read the reference cell (Adaeze Okafor, March 2026) in all four units and in
   USD and open its calculation; type the reference figure into it in every unit and with a unit
   written next to it (`7,880.00`, `€7,880`, `88 h`, `50%`), and a negative figure that must be
@@ -356,6 +361,9 @@ same rules for the rate history and the register search, listed at the end of th
   may be a parent, or hold its own allocations for the same people and months, so the leaf's
   allocations would have nowhere to go. Deleting an item takes its subtree and their allocations;
   the user confirms a summary first, and if anything in it changed meanwhile nothing is deleted.
+- **Projects** keep the start and end dates of the seed. Allocations are per month, so every month
+  the project runs on at least one day can be planned: one that starts on the 12th can be staffed
+  for that whole month.
 - **Allocations** sit on leaves, inside their project's months, one per person, item and month;
   setting one to zero removes it. A changed amount takes a revision above every current one, which
   orders edits for the capacity check below.
@@ -407,9 +415,11 @@ with a plain form post.
 - **Storage.** One JSON document per service, written to a temporary file, flushed and renamed over
   the old one. The first start imports the service's own part of the seed; after that the stored
   document is the truth. A change is stored before it is visible or announced, and changes run one
-  after another. A data file that cannot be read, or breaks a domain rule, stops the service at start-up with its path
-  in the message; it is never replaced by the seed. On `SIGTERM` the service drops open event
-  streams and finishes pending writes before it exits.
+  after another. A data file that cannot be read, or breaks a domain rule, stops the service at
+  start-up with its path in the message; it is never replaced by the seed. Data written in an older
+  format is not converted: `docker compose down -v`, or deleting `data/` in development, starts
+  again from the seed. On `SIGTERM` the service drops open event streams and finishes pending
+  writes before it exits.
 - **Revisions.** Each service counts its changes; reads and successful commands carry the revision
   they reflect. An event says who changed and at which revision, and is sent only after the change
   is stored. Delivery's stream announces workload changes only, when a published figure differs:

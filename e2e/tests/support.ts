@@ -14,7 +14,7 @@ export async function openStaffing(page: Page, path: string): Promise<void> {
 /** The unit's radio button is covered by its label, which is what a person clicks. */
 export async function showUnit(page: Page, unit: string): Promise<void> {
   await page.locator('label', { hasText: unit }).click();
-  await expect(staffingGrid(page)).toHaveAccessibleName(new RegExp(`, ${escapeRegExp(unit)}$`));
+  await expect(staffingGrid(page)).toHaveAccessibleName(new RegExp(`, ${RegExp.escape(unit)}$`));
 }
 
 /**
@@ -108,5 +108,3 @@ export async function restoreReference(request: APIRequestContext): Promise<void
   );
   if (cell?.personMonths !== 0.5) await setReferenceCell(request, 0.5);
 }
-
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

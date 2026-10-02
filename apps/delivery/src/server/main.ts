@@ -48,16 +48,22 @@ const service = createDeliveryService({
 const app = new Hono();
 app.route(API_BASE, createDeliveryApi({ service, subscribe: events.subscribe }));
 
-// The bundle is public: any origin may read the manifest and the chunks.
-app.use('*', async (context, next) => {
-  await next();
-  context.header('Access-Control-Allow-Origin', '*');
-  const path = new URL(context.req.url).pathname;
-  if (path === '/' || path === '/index.html' || path === '/mf-manifest.json') {
-    context.header('Cache-Control', 'no-cache');
-  }
-});
-app.use('*', serveStatic({ root: staticDir }));
+app.use(
+  '*',
+  serveStatic({
+    root: staticDir,
+    onFound: (path, context) => {
+      // The bundle is public: any origin may read the manifest and the chunks. Only files found
+      // here say so; a preflight for a write to the API is never answered, so no other page can
+      // send one.
+      context.header('Access-Control-Allow-Origin', '*');
+      // The entry points name the hashed chunks, so a new deployment must be seen at once.
+      if (/(^|[\\/])(index\.html|mf-manifest\.json)$/.test(path)) {
+        context.header('Cache-Control', 'no-cache');
+      }
+    },
+  }),
+);
 
 const server = serve({ fetch: app.fetch, port }, () => {
   console.log(`delivery: listening on :${String(port)}, data in ${dataDir}`);

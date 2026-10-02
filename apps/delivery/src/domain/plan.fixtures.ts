@@ -1,4 +1,4 @@
-import { yearMonth } from './calendar';
+import { isoDate, yearMonth } from './calendar';
 import { allocationId, breakdownItemId, employeeId, projectId, type ProjectId } from './ids';
 import { createPlan, type Allocation, type BreakdownItem, type Project } from './plan';
 
@@ -6,8 +6,8 @@ export const ledger = projectId('ledger');
 export const portal = projectId('portal');
 
 export const projects: Project[] = [
-  { id: ledger, name: 'Ledger', firstMonth: yearMonth('2026-03'), lastMonth: yearMonth('2027-02') },
-  { id: portal, name: 'Portal', firstMonth: yearMonth('2026-06'), lastMonth: yearMonth('2027-03') },
+  { id: ledger, name: 'Ledger', startDate: isoDate('2026-03-01'), endDate: isoDate('2027-02-28') },
+  { id: portal, name: 'Portal', startDate: isoDate('2026-06-01'), endDate: isoDate('2027-03-31') },
 ];
 
 export const item = (id: string, project: ProjectId, parent: string | null): BreakdownItem => ({

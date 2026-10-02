@@ -54,22 +54,12 @@ export function eventStream(
     const unsubscribe = subscribe((event) => {
       void stream.writeSSE({ event: event.type, data: JSON.stringify(event) });
     });
-    const closed = new Promise<void>((resolve) => {
-      stream.onAbort(() => {
-        unsubscribe();
-        resolve();
-      });
+    stream.onAbort(() => {
+      unsubscribe();
     });
     await stream.write(': open\n\n');
     for (;;) {
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      await Promise.race([
-        closed,
-        new Promise<void>((resolve) => {
-          timer = setTimeout(resolve, heartbeatMs);
-        }),
-      ]);
-      clearTimeout(timer);
+      await stream.sleep(heartbeatMs);
       if (stream.aborted) break;
       await stream.write(': keep-alive\n\n');
     }

@@ -67,7 +67,7 @@ export function CalculationPanel({ calculation, currency }: Props) {
           <>
             <dt>Allocated</dt>
             <dd>
-              {formatDecimal(allocation.personMonths, 2)} person-months ={' '}
+              {formatDecimal(allocation.personMonths)} person-months ={' '}
               {formatSteps(allocation.capacityPercentSteps, 'capacityPercent')} % of capacity
             </dd>
             <dt>Hours a working day</dt>

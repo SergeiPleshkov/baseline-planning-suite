@@ -15,8 +15,8 @@ export type RateTimeline = { readonly changes: readonly RateChange[] } & {
 };
 
 export function rateTimeline(changes: readonly RateChange[]): RateTimeline {
-  const sorted: readonly RateChange[] = [...changes].sort((a, b) =>
-    a.effectiveFrom.localeCompare(b.effectiveFrom),
+  const sorted: readonly RateChange[] = changes.toSorted((a, b) =>
+    a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0,
   );
   sorted.forEach((change, index) => {
     if (!Number.isFinite(change.hourlyRateEur) || change.hourlyRateEur < 0) {

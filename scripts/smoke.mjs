@@ -141,6 +141,15 @@ for (const name of REMOTES) {
     continue;
   }
   check(`the ${name} manifest names its remote and its entry script loads`, async () => {
+    const served = await fetchWithin(entry);
+    expect(
+      served.headers.get('access-control-allow-origin') === '*',
+      `${entry} cannot be read from another origin`,
+    );
+    expect(
+      (served.headers.get('cache-control') ?? '').includes('no-cache'),
+      `${entry} may be cached, so a new deployment could go unseen`,
+    );
     const manifest = await getJson(entry);
     expect(manifest.name === name, `manifest.name is ${String(manifest.name)}`);
     const { path = '', name: file } = manifest.metaData?.remoteEntry ?? {};
@@ -188,6 +197,26 @@ if (!down.has('delivery')) {
   check('Delivery streams change events through the gateway', () =>
     expectOpenStream(`${API.delivery}/events`),
   );
+}
+
+for (const name of REMOTES.filter((remote) => !down.has(remote))) {
+  // A JSON write from another origin needs a preflight, and POST is let through by any approval
+  // that names the content-type header, whatever methods it lists.
+  check(`a page on another origin is not allowed to write to the ${name} API`, async () => {
+    const path = `${API[name]}/${name === 'people' ? 'employees/emp-001/rates' : 'items'}`;
+    const response = await fetchWithin(path, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://elsewhere.example',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type',
+      },
+    });
+    expect(
+      !response.ok || response.headers.get('access-control-allow-origin') === null,
+      `${path} approves a cross-origin write (HTTP ${String(response.status)})`,
+    );
+  });
 }
 
 await waitForGateway();

@@ -27,7 +27,6 @@ type Mode =
   | { readonly kind: 'removing'; readonly id: string }
   | { readonly kind: 'clearing' };
 
-/** What removing a record does to the days around it, in words. */
 function consequenceOfRemoving(
   periods: readonly EffectivePeriod[],
   index: number,

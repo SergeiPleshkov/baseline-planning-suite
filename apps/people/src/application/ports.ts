@@ -32,7 +32,6 @@ export interface WorkloadGateway {
 }
 
 export interface FeedHandlers {
-  /** An event arrived that says the data changed: read it again. */
   readonly onChange: () => void;
   /** The stream opened, now or again after a break; events in between may have been missed. */
   readonly onConnected: () => void;

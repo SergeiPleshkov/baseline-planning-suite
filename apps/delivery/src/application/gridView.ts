@@ -1,8 +1,15 @@
-import { addMonths, monthsBetween, yearMonth, type YearMonth } from '../domain/calendar';
+import {
+  addMonths,
+  monthsBetween,
+  yearMonth,
+  type MonthSpan,
+  type YearMonth,
+} from '../domain/calendar';
 import { workload } from '../domain/capacity';
 import type { BreakdownItemId, EmployeeId } from '../domain/ids';
 import {
   childrenOf,
+  isProjectMonth,
   type Allocation,
   type BreakdownItem,
   type Plan,
@@ -21,26 +28,19 @@ import {
 import type { StaffMember } from '../infrastructure/peopleContract';
 import { DISPLAY_DECIMALS, capacityPercentSteps } from './figures';
 import { contributionsOf, type Contribution } from './overload';
-import { byText } from './sorting';
+import { byKey, byName } from './sorting';
 import { topLevelOf } from './treeView';
 
-export interface Horizon {
-  readonly first: YearMonth;
-  readonly last: YearMonth;
-}
-
-export const projectHorizon = (project: Project): Horizon => ({
-  first: project.firstMonth,
-  last: project.lastMonth,
-});
-
-export const shiftHorizon = (horizon: Horizon, months: number): Horizon => ({
+export const shiftHorizon = (horizon: MonthSpan, months: number): MonthSpan => ({
   first: addMonths(horizon.first, months),
   last: addMonths(horizon.last, months),
 });
 
 /** The case study's reporting year, a preset next to the project's own span. */
-export const REPORTING_YEAR: Horizon = { first: yearMonth('2026-04'), last: yearMonth('2027-03') };
+export const REPORTING_YEAR: MonthSpan = {
+  first: yearMonth('2026-04'),
+  last: yearMonth('2027-03'),
+};
 
 export interface GridCell {
   readonly month: YearMonth;
@@ -105,9 +105,8 @@ export interface Grid {
 export interface GridInput {
   readonly plan: Plan;
   readonly project: Project;
-  readonly horizon: Horizon;
+  readonly horizon: MonthSpan;
   readonly unit: DisplayUnit;
-  /** Display currency per EUR. */
   readonly currencyPerEur: number;
   /** `null` while People cannot be read. */
   readonly staff: ReadonlyMap<EmployeeId, StaffMember> | null;
@@ -253,7 +252,7 @@ export function buildGrid(input: GridInput): GridBuild {
     }
     return [...planned]
       .map(([employeeId, byMonth]) => ({ employeeId, byMonth, name: nameOf(employeeId) }))
-      .sort((a, b) => byText(a.name, b.name) || byText(a.employeeId, b.employeeId))
+      .sort((a, b) => byName(a.name, b.name) || byKey(a.employeeId, b.employeeId))
       .map(({ employeeId, byMonth, name }) => {
         const allocations = months.map((month) => byMonth.get(month) ?? null);
         return {
@@ -311,7 +310,7 @@ export function buildGrid(input: GridInput): GridBuild {
     return found;
   };
 
-  const active = months.map((month) => month >= project.firstMonth && month <= project.lastMonth);
+  const active = months.map((month) => isProjectMonth(project, month));
   const loads = workload(plan);
   const overCapacityOf = (
     employee: EmployeeId,

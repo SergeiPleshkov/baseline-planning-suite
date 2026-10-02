@@ -69,24 +69,13 @@ export interface DeliveryServiceDeps {
   readonly notify: (event: WorkloadChangedEvent) => void;
 }
 
-/** The employees whose published workload differs between two plans. */
 function employeesWithChangedWorkload(before: Plan, after: Plan): string[] {
-  const byEmployee = (plan: Plan) => {
-    const grouped = new Map<string, string[]>();
-    for (const entry of workloadToContract(plan, 0).entries) {
-      grouped.set(entry.employeeId, [
-        ...(grouped.get(entry.employeeId) ?? []),
-        JSON.stringify(entry),
-      ]);
-    }
-    return grouped;
-  };
+  const byEmployee = (plan: Plan) =>
+    Map.groupBy(workloadToContract(plan, 0).entries, (entry) => entry.employeeId);
   const [was, now] = [byEmployee(before), byEmployee(after)];
-  return [...new Set([...was.keys(), ...now.keys()])]
-    .filter(
-      (employee) => (was.get(employee) ?? []).join('\n') !== (now.get(employee) ?? []).join('\n'),
-    )
-    .sort();
+  const same = (employee: string) =>
+    JSON.stringify(was.get(employee) ?? []) === JSON.stringify(now.get(employee) ?? []);
+  return [...new Set([...was.keys(), ...now.keys()])].filter((employee) => !same(employee)).sort();
 }
 
 export function createDeliveryService(deps: DeliveryServiceDeps): DeliveryService {

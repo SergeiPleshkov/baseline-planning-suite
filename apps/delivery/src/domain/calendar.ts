@@ -36,6 +36,14 @@ export function addMonths(month: YearMonth, delta: number): YearMonth {
   return yearMonth(`${String(Math.floor(index / 12)).padStart(4, '0')}-${pad((index % 12) + 1)}`);
 }
 
+/** The months from `first` to `last`, both included. */
+export interface MonthSpan {
+  readonly first: YearMonth;
+  readonly last: YearMonth;
+}
+
+export const monthOf = (date: IsoDate): YearMonth => yearMonth(date.slice(0, 7));
+
 /** Every month from `first` to `last`, both included; none when `last` is before `first`. */
 export function monthsBetween(first: YearMonth, last: YearMonth): readonly YearMonth[] {
   const months: YearMonth[] = [];

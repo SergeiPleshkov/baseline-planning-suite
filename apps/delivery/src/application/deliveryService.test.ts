@@ -368,7 +368,7 @@ describe('stateFromDocument', () => {
       'a month that does not exist',
       (d: PlanDocument) => ({
         ...d,
-        projects: d.projects.map((p) => ({ ...p, lastMonth: '2027-13' })),
+        projects: d.projects.map((p) => ({ ...p, endDate: '2027-13-01' })),
       }),
     ],
     [

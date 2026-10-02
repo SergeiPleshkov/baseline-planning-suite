@@ -1,8 +1,4 @@
-import {
-  EmployeesResponseSchema,
-  RatesResponseSchema,
-  type RateRecordDto,
-} from '@baseline/people-contract';
+import { EmployeesResponseSchema, RatesResponseSchema } from '@baseline/people-contract';
 import { isoDate } from '../domain/calendar';
 import { employeeId, type EmployeeId } from '../domain/ids';
 import { rateTimeline, type RateTimeline } from '../domain/rateTimeline';
@@ -49,11 +45,7 @@ export function rateTimelinesFromPeople(
     return err({ reason: 'malformed', detail: `rate id ${repeatedRate} appears twice` });
   }
 
-  const byEmployee = new Map<EmployeeId, RateRecordDto[]>();
-  for (const rate of parsed.data.rates) {
-    const id = employeeId(rate.employeeId);
-    byEmployee.set(id, [...(byEmployee.get(id) ?? []), rate]);
-  }
+  const byEmployee = Map.groupBy(parsed.data.rates, (rate) => employeeId(rate.employeeId));
 
   const timelines = new Map<EmployeeId, RateTimeline>();
   for (const [id, rates] of byEmployee) {

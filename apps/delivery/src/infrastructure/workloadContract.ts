@@ -1,6 +1,7 @@
 import type { WorkloadEntry, WorkloadResponse } from '@baseline/delivery-contract';
 import { workload } from '../domain/capacity';
 import type { Plan } from '../domain/plan';
+import { byKey } from '../application/sorting';
 
 /** Entries are ordered by employee, then month, so the same plan always serialises the same way. */
 export function workloadToContract(plan: Plan, revision: number): WorkloadResponse {
@@ -15,7 +16,6 @@ export function workloadToContract(plan: Plan, revision: number): WorkloadRespon
       );
     }
   }
-  const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-  entries.sort((a, b) => compare(a.employeeId, b.employeeId) || compare(a.month, b.month));
+  entries.sort((a, b) => byKey(a.employeeId, b.employeeId) || byKey(a.month, b.month));
   return { revision, entries };
 }

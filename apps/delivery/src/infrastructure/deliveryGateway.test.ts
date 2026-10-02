@@ -17,7 +17,7 @@ function recorder(answer: () => Promise<Response>) {
 
 const PLAN = {
   revision: 2,
-  projects: [{ id: 'p', name: 'P', firstMonth: '2026-01', lastMonth: '2026-12' }],
+  projects: [{ id: 'p', name: 'P', startDate: '2026-01-01', endDate: '2026-12-31' }],
   items: [{ id: 'a', projectId: 'p', parentId: null, name: 'A' }],
   allocations: [],
 };

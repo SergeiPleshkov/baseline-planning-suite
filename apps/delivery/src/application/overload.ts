@@ -2,7 +2,7 @@ import type { YearMonth } from '../domain/calendar';
 import { workload } from '../domain/capacity';
 import type { BreakdownItemId, EmployeeId, ProjectId } from '../domain/ids';
 import type { Allocation, Plan, Project } from '../domain/plan';
-import { byText } from './sorting';
+import { byKey } from './sorting';
 import { pathOf } from './treeView';
 
 export interface Contribution {
@@ -53,7 +53,7 @@ export function overloads(plan: Plan): OverloadEntry[] {
       }
     }
   }
-  return entries.sort((a, b) => byText(a.employeeId, b.employeeId) || byText(a.month, b.month));
+  return entries.sort((a, b) => byKey(a.employeeId, b.employeeId) || byKey(a.month, b.month));
 }
 
 /**

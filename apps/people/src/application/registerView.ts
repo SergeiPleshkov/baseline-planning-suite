@@ -23,8 +23,11 @@ export interface RegisterRow {
   readonly overMonths: number | null;
 }
 
+// One locale for everyone, so that the list comes out the same in every browser.
+const collator = new Intl.Collator('en-GB', { numeric: true });
+
 export const rolesOf = (employees: readonly Employee[]): string[] =>
-  [...new Set(employees.map((employee) => employee.role))].sort((a, b) => a.localeCompare(b));
+  [...new Set(employees.map((employee) => employee.role))].sort((a, b) => collator.compare(a, b));
 
 /** Employees matching the query and, if given, the role; in register order. */
 export function registerRows(input: {

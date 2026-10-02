@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { isoDate, monthsBetween, yearMonth } from '../domain/calendar';
 import { breakdownItemId, employeeId, type EmployeeId } from '../domain/ids';
-import { createPlan, type Plan } from '../domain/plan';
+import { createPlan, projectMonths, type Plan } from '../domain/plan';
 import { allocation, items, ledger, portal, projects, testPlan } from '../domain/plan.fixtures';
 import { rateTimeline, type RateTimeline } from '../domain/rateTimeline';
 import { DISPLAY_UNITS, type DisplayUnit } from '../domain/units';
@@ -10,7 +10,6 @@ import type { StaffMember } from '../infrastructure/peopleContract';
 import {
   buildGrid,
   conversionFor,
-  projectHorizon,
   REPORTING_YEAR,
   shiftHorizon,
   visibleLines,
@@ -56,7 +55,7 @@ function input(plan: Plan, overrides: Partial<GridInput> = {}): GridInput {
   return {
     plan,
     project,
-    horizon: projectHorizon(project),
+    horizon: projectMonths(project),
     unit: 'personMonths',
     currencyPerEur: 1,
     staff: STAFF,
@@ -203,7 +202,7 @@ describe('buildGrid', () => {
   it('shows only the project’s own items', () => {
     const project = projects.find((each) => each.id === portal);
     if (!project) throw new Error('fixture without the portal project');
-    const grid = gridOf(testPlan(), { project, horizon: projectHorizon(project) });
+    const grid = gridOf(testPlan(), { project, horizon: projectMonths(project) });
     expect(grid.lines.map((line) => line.item.id)).toEqual(['shell', 'build', 'build']);
   });
 
@@ -352,7 +351,7 @@ describe('marks on a person’s cell', () => {
       'alloc-050',
     ]);
     const project = portalProject();
-    const portalGrid = gridOf(testPlan(), { project, horizon: projectHorizon(project) });
+    const portalGrid = gridOf(testPlan(), { project, horizon: projectMonths(project) });
     expect(cellIn(portalGrid, 'build', 'emp-003', '2026-06').overCapacity).toMatchObject({
       isLatestEdit: true,
     });
@@ -520,9 +519,9 @@ describe('visibleLines', () => {
 describe('horizons', () => {
   it('start as the project’s own span and shift by whole months', () => {
     const project = ledgerProject();
-    expect(projectHorizon(project)).toEqual({ first: '2026-03', last: '2027-02' });
-    expect(shiftHorizon(projectHorizon(project), 1)).toEqual({ first: '2026-04', last: '2027-03' });
-    expect(shiftHorizon(projectHorizon(project), -3)).toEqual({
+    expect(projectMonths(project)).toEqual({ first: '2026-03', last: '2027-02' });
+    expect(shiftHorizon(projectMonths(project), 1)).toEqual({ first: '2026-04', last: '2027-03' });
+    expect(shiftHorizon(projectMonths(project), -3)).toEqual({
       first: '2025-12',
       last: '2026-11',
     });
@@ -582,7 +581,7 @@ describe('what the grid shows adds up', () => {
           const grid = gridOf(planOf(drawn), {
             unit,
             currencyPerEur,
-            horizon: shiftHorizon(projectHorizon(ledgerProject()), shift),
+            horizon: shiftHorizon(projectMonths(ledgerProject()), shift),
           });
           for (const line of grid.lines) {
             expect(sum(line.cells.map((cell) => cell.steps))).toBe(line.total);

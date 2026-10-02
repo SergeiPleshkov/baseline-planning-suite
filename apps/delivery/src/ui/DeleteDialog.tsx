@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import type { DeliveryStore } from '../application/deliveryStore';
 import type { DeletionSummaryDto } from '../application/planDocument';
 import type { BreakdownItemId } from '../domain/ids';
 import styles from './Dialogs.module.css';
+import { formatDecimal } from './format';
 import { Modal } from './Modal';
 
 interface Props {
@@ -25,11 +26,6 @@ type Summary =
       readonly names: readonly string[];
     };
 
-const personMonths = (value: number) =>
-  new Intl.NumberFormat('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-    value,
-  );
-
 const plural = (count: number, one: string, many: string) =>
   `${String(count)} ${count === 1 ? one : many}`;
 
@@ -43,24 +39,18 @@ export function DeleteDialog({ itemId, itemName, store, namesOf, onDeleted, onCl
   const [attempt, setAttempt] = useState(0);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const latestNamesOf = useRef(namesOf);
-  useEffect(() => {
-    latestNamesOf.current = namesOf;
+  const arrived = useEffectEvent((result: Awaited<ReturnType<typeof store.deletionSummary>>) => {
+    setSummary(
+      result.ok
+        ? { status: 'ready', summary: result.summary, names: namesOf(result.summary.items) }
+        : { status: 'failed', message: result.message },
+    );
   });
 
   useEffect(() => {
     let cancelled = false;
     void store.deletionSummary(itemId).then((result) => {
-      if (cancelled) return;
-      setSummary(
-        result.ok
-          ? {
-              status: 'ready',
-              summary: result.summary,
-              names: latestNamesOf.current(result.summary.items),
-            }
-          : { status: 'failed', message: result.message },
-      );
+      if (!cancelled) arrived(result);
     });
     return () => {
       cancelled = true;
@@ -91,7 +81,7 @@ export function DeleteDialog({ itemId, itemName, store, namesOf, onDeleted, onCl
           <p>
             This deletes {plural(summary.summary.items.length, 'item', 'items')}
             {summary.summary.allocations.length > 0
-              ? ` and ${plural(summary.summary.allocations.length, 'allocation', 'allocations')} totalling ${personMonths(summary.summary.personMonths)} person-months`
+              ? ` and ${plural(summary.summary.allocations.length, 'allocation', 'allocations')} totalling ${formatDecimal(summary.summary.personMonths)} person-months`
               : ', none of which holds allocations'}
             :
           </p>

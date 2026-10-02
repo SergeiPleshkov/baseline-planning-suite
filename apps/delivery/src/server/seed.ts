@@ -36,8 +36,8 @@ export function deliveryDocumentFromSeed(raw: unknown): PlanDocument {
     projects: seed.projects.map((project) => ({
       id: project.id,
       name: project.name,
-      firstMonth: project.startDate.slice(0, 7),
-      lastMonth: project.endDate.slice(0, 7),
+      startDate: project.startDate,
+      endDate: project.endDate,
     })),
     items: seed.breakdownItems,
     allocations: seed.allocations.map((allocation, index) => ({

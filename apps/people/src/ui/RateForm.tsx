@@ -1,5 +1,5 @@
 import type { DisplayCurrency } from '@baseline/host-contract';
-import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react';
+import { useId, useRef, useState, type SyntheticEvent } from 'react';
 import type { CommandResult } from '../application/ports';
 import { parseDateInput, parseHourlyRateInput } from '../application/rateForm';
 import type { IsoDate } from '../domain/calendar';
@@ -32,11 +32,6 @@ export function RateForm({ label, submitLabel, initial, currency, onSubmit, onCa
   const [pending, setPending] = useState(false);
   const dateInput = useRef<HTMLInputElement>(null);
   const rateInput = useRef<HTMLInputElement>(null);
-
-  // A form that opens takes the focus: the button that opened it is gone.
-  useEffect(() => {
-    dateInput.current?.focus();
-  }, []);
 
   const date = parseDateInput(validFrom);
   const amount = parseHourlyRateInput(rate);
@@ -72,6 +67,8 @@ export function RateForm({ label, submitLabel, initial, currency, onSubmit, onCa
         <label htmlFor={`${id}-from`}>Starts on</label>
         <input
           ref={dateInput}
+          // A form that opens takes the focus: the button that opened it is gone.
+          autoFocus
           id={`${id}-from`}
           type="date"
           placeholder="YYYY-MM-DD"

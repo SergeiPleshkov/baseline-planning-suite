@@ -31,7 +31,7 @@ describe('the shipped seed, read as Delivery data', () => {
       month: '2026-03',
       personMonths: 0.5,
     });
-    expect(document.projects[0]).toMatchObject({ firstMonth: '2026-03', lastMonth: '2027-02' });
+    expect(document.projects[0]).toMatchObject({ startDate: '2026-03-01', endDate: '2027-02-28' });
   });
 
   it('obeys every plan rule: at most three levels, allocations on leaves inside the project', () => {

@@ -44,7 +44,6 @@ export interface PeopleStore {
   subscribe: (listener: () => void) => () => void;
   /** Reads everything again; also what a Retry button calls. */
   load: () => Promise<void>;
-  /** Reads only Delivery's figures again. */
   reloadWorkload: () => Promise<void>;
   /** Reads the register again whenever People says rates changed, in another tab too. Returns how to stop. */
   followRates: (feed: ChangeFeed) => () => void;
@@ -183,14 +182,7 @@ export function createPeopleStore(gateways: {
   async function readWorkload(): Promise<boolean> {
     try {
       const response = await workload.workload();
-      const grouped = new Map<EmployeeId, MonthLoad[]>();
-      for (const entry of response.entries) {
-        const id = employeeId(entry.employeeId);
-        grouped.set(id, [
-          ...(grouped.get(id) ?? []),
-          { month: entry.month, personMonths: entry.personMonths, status: entry.status },
-        ]);
-      }
+      const grouped = Map.groupBy(response.entries, (entry) => employeeId(entry.employeeId));
       // Without the stream the figures cannot be trusted to follow Delivery: capacity is unknown.
       publish({
         workload: workloadStreamDown
@@ -198,8 +190,14 @@ export function createPeopleStore(gateways: {
           : {
               status: 'ready',
               byEmployee: new Map(
-                [...grouped].map(([id, months]) => {
-                  const sorted = [...months].sort((a, b) => (a.month < b.month ? -1 : 1));
+                [...grouped].map(([id, entries]) => {
+                  const sorted = entries
+                    .map(({ month, personMonths, status }): MonthLoad => ({
+                      month,
+                      personMonths,
+                      status,
+                    }))
+                    .sort((a, b) => (a.month < b.month ? -1 : 1));
                   return [
                     id,
                     {

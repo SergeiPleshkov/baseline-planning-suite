@@ -82,7 +82,7 @@ export function nextTreeAction(
     case 'Home':
       return select(rows[0]);
     case 'End':
-      return select(rows[rows.length - 1]);
+      return select(rows.at(-1));
     case 'ArrowRight':
       if (!row.hasChildren) return null;
       return row.expanded ? select(rows[index + 1]) : { kind: 'toggle', id: row.item.id };
@@ -177,7 +177,6 @@ export function expandPathTo(
   return next;
 }
 
-/** Whether `ancestor` is somewhere above `id`. */
 export function isAncestor(plan: Plan, ancestor: BreakdownItemId, id: BreakdownItemId): boolean {
   let parent = plan.items.get(id)?.parentId ?? null;
   while (parent !== null) {
