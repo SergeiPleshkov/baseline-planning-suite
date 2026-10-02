@@ -8,3 +8,5 @@ IMPLEMENTATION_PLAN.md
 *.log
 .env
 .env.*
+**/dist-server
+**/data

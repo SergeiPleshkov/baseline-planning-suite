@@ -2,4 +2,5 @@ packages:
   - apps/*
   - contracts/*
 allowBuilds:
+  esbuild: false
   unrs-resolver: false

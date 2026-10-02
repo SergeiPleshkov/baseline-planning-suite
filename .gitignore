@@ -9,3 +9,5 @@ coverage/
 Thumbs.db
 .idea/
 .vscode/
+dist-server/
+data/
