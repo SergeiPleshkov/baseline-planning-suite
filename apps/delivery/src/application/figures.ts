@@ -1,3 +1,4 @@
+import { roundForDisplay, type GridRow } from '../domain/rounding/roundForDisplay';
 import type { DisplayUnit } from '../domain/units';
 
 /**
@@ -31,3 +32,29 @@ function formatterFor(unit: DisplayUnit): Intl.NumberFormat {
 /** A count of display steps as the person reads it: 788000 steps of a cent is `7,880.00`. */
 export const formatSteps = (steps: number, unit: DisplayUnit): string =>
   formatterFor(unit).format(steps / 10 ** DISPLAY_DECIMALS[unit]);
+
+/** Rounds `values` as the rows of one column, so that the shown parts add up to the shown total. */
+export function roundedColumn(
+  values: readonly number[],
+  decimals: number,
+): { readonly parts: readonly number[]; readonly total: number } {
+  const rows: GridRow[] = values.map((value, index) => ({
+    kind: 'leaf',
+    id: String(index),
+    cells: [value],
+  }));
+  const figures = roundForDisplay(
+    { kind: 'group', id: 'column', children: rows },
+    { columns: 1, decimals },
+  );
+  const at = (id: string) => {
+    const found = figures.get(id);
+    if (!found) throw new Error(`No figures for ${id}`);
+    return found;
+  };
+  return { parts: values.map((_, index) => at(String(index)).total), total: at('column').total };
+}
+
+/** A share of a person-month as display steps of percent of capacity: 1.18 is 1180 steps, 118.0 %. */
+export const capacityPercentSteps = (personMonths: number): number =>
+  roundedColumn([personMonths * 100], DISPLAY_DECIMALS.capacityPercent).total;

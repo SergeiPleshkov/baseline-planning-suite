@@ -1,0 +1,40 @@
+.list {
+  padding: 8px 12px;
+  border: 1px solid #e3b4b1;
+  border-radius: 6px;
+  background: #fdf6f5;
+  font-size: 13px;
+}
+
+.list summary {
+  cursor: pointer;
+  color: #8c1d18;
+  font-weight: 600;
+}
+
+.list ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-top: 1px solid #f0d9d7;
+}
+
+.list button {
+  flex: none;
+  padding: 2px 10px;
+  font: inherit;
+}
+
+.none {
+  margin: 0;
+  color: #5a6472;
+  font-size: 13px;
+}

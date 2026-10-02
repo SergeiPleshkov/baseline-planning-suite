@@ -261,6 +261,22 @@ item's name opens or closes it.
 - **Assigning.** "Assign person…" gives a person a row on a leaf before they have any allocation
   there. The row exists in this view only and is not saved: it stays after its figures are
   cleared, and is gone when the project is changed or the page is reloaded.
+- **Over capacity.** A person's load in a month is summed over every project, the ones not on
+  screen included. In an over-capacity month the allocation edited last carries a † and a red
+  tint, with a tooltip saying whose load it is and why it is blamed; the other contributions are
+  tinted lighter. Hovering a cell of the month says the load, where the other contributions are and
+  which one is blamed. The seed has no timestamps and no authors, so "edited last" is the order of
+  the edits (the file order for the seed) and the screen cannot say who made one or when. "Over
+  capacity" below the grid lists every such person-month that involves the project, by name and month, with
+  what it is made of and a Show button that opens the right row at the right month.
+- **Without a rate.** In cost, a cell whose month has working days with no rate for that person
+  carries a ◇ saying how many; those days count as zero in the cost, as the blended rate does.
+- **Calculation.** The panel under the grid shows the person's cell that last had the focus,
+  and lays it out like figure 4 of the case study: the working days and the hours in a person-month, the
+  month split by rate with hours and cost per slice, the blended rate, and the person's load in
+  that month by project and work item, with its edit order. Its figures are rounded together too,
+  so slices add up to the totals shown. For the reference cell it reads 8 days at €80.00 =
+  32.00 h, €2,560.00; 14 days at €95.00 = 56.00 h, €5,320.00; 88.00 h and €7,880.00 in all.
 - **Months.** The grid opens on the project's own span (Mar 26 – Feb 27 for Ledger Consolidation,
   so the reference cell is on screen). ‹ and › move it by a month; "Project span" and
   "Apr 26 – Mar 27" are presets. The totals cover the months shown.
@@ -274,8 +290,7 @@ item's name opens or closes it.
   history, both read from People's API at the address in `peopleApi` of the remote's `config.json`.
   If People cannot be read, person-months and percent still show, with people named by id; the
   screen says what is missing and offers Retry, and hours and cost say why they are not shown.
-  The data is read when the Delivery remote starts and does not update by itself yet. A month
-  or person without a rate shows 0.00 in cost; it is not marked as unpriced yet.
+  The data is read when the Delivery remote starts and does not update by itself yet.
 - **State.** The unit, the months and the open rows stay while the Breakdown view is shown, and
   reset when another project is chosen.
 

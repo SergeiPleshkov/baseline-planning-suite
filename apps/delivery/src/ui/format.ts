@@ -15,3 +15,25 @@ export const formatMonthShort = (month: string): string =>
     year: '2-digit',
     timeZone: 'UTC',
   });
+
+export const formatDay = (date: string): string =>
+  new Date(`${date}T00:00:00Z`).toLocaleDateString(LOCALE, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+
+/** A rate in EUR an hour, as stored: `€95.00`, or with more decimals for a blended rate. */
+export const formatEuroRate = (rate: number, decimals = 2): string =>
+  new Intl.NumberFormat(LOCALE, {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(rate);
+
+export const formatDecimal = (value: number, decimals = 2): string =>
+  new Intl.NumberFormat(LOCALE, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);

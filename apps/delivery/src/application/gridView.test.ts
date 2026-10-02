@@ -330,6 +330,101 @@ describe('assigned people', () => {
   });
 });
 
+describe('marks on a person’s cell', () => {
+  const cellIn = (grid: Grid, item: string, employee: string, month: string) => {
+    const line = lineFor(grid, item, employee);
+    const found = line.cells.find((cell) => cell.month === month);
+    if (!found) throw new Error(`no ${month} cell`);
+    return found;
+  };
+  const portalProject = () => {
+    const project = projects.find((each) => each.id === portal);
+    if (!project) throw new Error('fixture without the portal project');
+    return project;
+  };
+
+  it('blames an over-allocated month on the allocation edited last, wherever it sits', () => {
+    // M. Brandt, June 2026: 0.59 on Ledger (alloc-050) and 0.59 on Portal (alloc-073, edited later).
+    const inLedger = cellIn(gridOf(testPlan()), 'design', 'emp-003', '2026-06').overCapacity;
+    expect(inLedger).toMatchObject({ personMonths: 1.18, percentSteps: 1180, isLatestEdit: false });
+    expect(inLedger?.contributions.map((each) => each.allocation.id)).toEqual([
+      'alloc-073',
+      'alloc-050',
+    ]);
+    const project = portalProject();
+    const portalGrid = gridOf(testPlan(), { project, horizon: projectHorizon(project) });
+    expect(cellIn(portalGrid, 'build', 'emp-003', '2026-06').overCapacity).toMatchObject({
+      isLatestEdit: true,
+    });
+  });
+
+  it('has nothing to say about a month within capacity, or an empty cell', () => {
+    const grid = gridOf(testPlan());
+    expect(cellIn(grid, 'cutover', 'emp-001', '2026-04').overCapacity).toBeNull();
+    expect(cellIn(grid, 'cutover', 'emp-001', '2026-05').overCapacity).toBeNull();
+    expect(lineFor(grid, 'design').cells.every((cell) => cell.overCapacity === null)).toBe(true);
+  });
+
+  it('counts the load of another project, not only the one on screen', () => {
+    const plan = createPlan({
+      projects,
+      items,
+      allocations: [
+        allocation('a1', 'design', 'emp-001', '2026-06', 0.6, 1),
+        allocation('a2', 'build', 'emp-001', '2026-06', 0.5, 2),
+      ],
+    });
+    expect(cellIn(gridOf(plan), 'design', 'emp-001', '2026-06').overCapacity).toMatchObject({
+      isLatestEdit: false,
+    });
+  });
+
+  it('treats a load that is exactly one person-month as within capacity, float noise or not', () => {
+    // 0.33 + 0.56 + 0.11 is 1.0000000000000002 in doubles.
+    const plan = createPlan({
+      projects,
+      items,
+      allocations: [
+        allocation('a1', 'design', 'emp-001', '2026-06', 0.33, 1),
+        allocation('a2', 'review', 'emp-001', '2026-06', 0.56, 2),
+        allocation('a3', 'docs', 'emp-001', '2026-06', 0.11, 3),
+      ],
+    });
+    const grid = gridOf(plan);
+    for (const item of ['design', 'review', 'docs']) {
+      expect(cellIn(grid, item, 'emp-001', '2026-06').overCapacity).toBeNull();
+    }
+  });
+
+  it('marks months without a rate in cost, with how many working days they lack it', () => {
+    const grid = gridOf(testPlan(), { unit: 'cost' });
+    // M. Brandt has no rate before August 2026; June 2026 has 22 working days.
+    expect(cellIn(grid, 'design', 'emp-003', '2026-06').unpriced).toEqual({
+      days: 22,
+      workingDays: 22,
+    });
+    expect(cellIn(grid, 'cutover', 'emp-001', '2026-04').unpriced).toBeNull();
+  });
+
+  it('marks a month that has a rate only for part of it', () => {
+    const lateStart = new Map(RATES).set(employeeId('emp-001'), timeline(['2026-04-15', 90]));
+    const grid = gridOf(testPlan(), { unit: 'cost', rates: lateStart });
+    expect(cellIn(grid, 'cutover', 'emp-001', '2026-04').unpriced).toEqual({
+      days: 10,
+      workingDays: 22,
+    });
+  });
+
+  it('marks nothing in the units that need no rate, or for a cell without an allocation', () => {
+    for (const unit of ['personMonths', 'hours', 'capacityPercent'] as const) {
+      const grid = gridOf(testPlan(), { unit });
+      expect(cellIn(grid, 'design', 'emp-003', '2026-06').unpriced).toBeNull();
+    }
+    const cost = gridOf(testPlan(), { unit: 'cost' });
+    expect(cellIn(cost, 'design', 'emp-003', '2026-07').unpriced).toBeNull();
+  });
+});
+
 describe('conversionFor', () => {
   const context = { staff: STAFF, rates: RATES, currencyPerEur: 1.17 };
 

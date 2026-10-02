@@ -1,4 +1,5 @@
 import { addMonths, monthsBetween, yearMonth, type YearMonth } from '../domain/calendar';
+import { workload } from '../domain/capacity';
 import type { BreakdownItemId, EmployeeId } from '../domain/ids';
 import {
   childrenOf,
@@ -18,7 +19,9 @@ import {
   type DisplayUnit,
 } from '../domain/units';
 import type { StaffMember } from '../infrastructure/peopleContract';
-import { DISPLAY_DECIMALS } from './figures';
+import { DISPLAY_DECIMALS, capacityPercentSteps } from './figures';
+import { contributionsOf, type Contribution } from './overload';
+import { byText } from './sorting';
 import { topLevelOf } from './treeView';
 
 export interface Horizon {
@@ -47,6 +50,24 @@ export interface GridCell {
   readonly steps: number;
   /** What is stored for this cell; only a person's row has one, and only if something was planned. */
   readonly allocation: Allocation | null;
+  /** Set when the cell's allocation is part of a month in which the person is over capacity. */
+  readonly overCapacity: OverCapacity | null;
+  /** In cost, an allocation in a month some working days of which have no rate. */
+  readonly unpriced: Unpriced | null;
+}
+
+export interface OverCapacity {
+  readonly personMonths: number;
+  readonly percentSteps: number;
+  /** This allocation is the one edited last, so the over-allocation is blamed on it. */
+  readonly isLatestEdit: boolean;
+  /** Everything the month is made of, in every project, newest edit first. */
+  readonly contributions: readonly Contribution[];
+}
+
+export interface Unpriced {
+  readonly days: number;
+  readonly workingDays: number;
 }
 
 interface LineBase {
@@ -103,8 +124,6 @@ export interface Assignment {
 export type GridBuild =
   | { readonly status: 'ready'; readonly grid: Grid }
   | { readonly status: 'unavailable'; readonly message: string };
-
-export const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 type AllocationIndex = ReadonlyMap<
   BreakdownItemId,
@@ -293,15 +312,42 @@ export function buildGrid(input: GridInput): GridBuild {
   };
 
   const active = months.map((month) => month >= project.firstMonth && month <= project.lastMonth);
+  const loads = workload(plan);
+  const overCapacityOf = (
+    employee: EmployeeId,
+    month: YearMonth,
+    allocation: Allocation,
+  ): OverCapacity | null => {
+    const load = loads.get(employee)?.get(month);
+    return load?.status === 'over'
+      ? {
+          personMonths: load.personMonths,
+          percentSteps: capacityPercentSteps(load.personMonths),
+          isLatestEdit: load.cause === allocation.id,
+          contributions: contributionsOf(plan, employee, month),
+        }
+      : null;
+  };
   const lines: GridLine[] = [];
   const addLines = (node: GridNode) => {
     const { cells, total } = figuresOf(node.key);
-    const gridCells = months.map((month, column): GridCell => ({
-      month,
-      active: active[column] ?? false,
-      steps: cells[column] ?? 0,
-      allocation: node.kind === 'person' ? (node.allocations[column] ?? null) : null,
-    }));
+    const gridCells = months.map((month, column): GridCell => {
+      const allocation = node.kind === 'person' ? (node.allocations[column] ?? null) : null;
+      return {
+        month,
+        active: active[column] ?? false,
+        steps: cells[column] ?? 0,
+        allocation,
+        overCapacity:
+          node.kind === 'person' && allocation
+            ? overCapacityOf(node.employeeId, month, allocation)
+            : null,
+        unpriced:
+          node.kind === 'person' && allocation && unit === 'cost'
+            ? unpricedIn(pricingFor(node.employeeId, month))
+            : null,
+      };
+    });
     if (node.kind === 'person') {
       lines.push({
         kind: 'person',
@@ -332,6 +378,11 @@ export function buildGrid(input: GridInput): GridBuild {
 
   return { status: 'ready', grid: { months, lines, totals: figuresOf(ROOT_KEY) } };
 }
+
+const unpricedIn = (pricing: MonthPricing): Unpriced | null =>
+  pricing.unpricedWorkingDays === 0
+    ? null
+    : { days: pricing.unpricedWorkingDays, workingDays: pricing.workingDays };
 
 export const visibleLines = (
   lines: readonly GridLine[],

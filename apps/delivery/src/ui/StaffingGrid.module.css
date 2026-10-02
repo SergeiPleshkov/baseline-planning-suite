@@ -48,6 +48,7 @@
 }
 
 .number {
+  position: relative;
   min-width: 64px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -147,4 +148,29 @@
   color: #8c1d18;
   background: #fdeceb;
   font-size: 13px;
+}
+
+.mark {
+  margin-left: 4px;
+  color: #8c1d18;
+  font-weight: 700;
+}
+
+.cause {
+  background: #fdeceb;
+  color: #8c1d18;
+  font-weight: 700;
+}
+
+.contributor {
+  background: #fff3e0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

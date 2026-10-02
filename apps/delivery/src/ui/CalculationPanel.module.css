@@ -1,0 +1,79 @@
+.panel {
+  padding: 12px 16px;
+  border: 1px solid #dde1e6;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.hint {
+  margin: 0;
+  padding: 12px 16px;
+  color: #5a6472;
+  border: 1px dashed #8a94a3;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 12px;
+}
+
+.facts dt {
+  color: #5a6472;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.table {
+  width: 100%;
+  margin-bottom: 12px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table caption {
+  margin-bottom: 4px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.table th,
+.table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid #eef0f2;
+  text-align: right;
+}
+
+.table th[scope='row'],
+.table thead th:first-child {
+  text-align: left;
+}
+
+.table tfoot th,
+.table tfoot td {
+  border-top: 2px solid #8a94a3;
+  font-weight: 700;
+}
+
+.blamed th,
+.blamed td {
+  color: #8c1d18;
+  background: #fdeceb;
+}
+
+.note {
+  margin: 0;
+  color: #5a6472;
+  font-size: 12px;
+}

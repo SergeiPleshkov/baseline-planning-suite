@@ -10,7 +10,9 @@ import {
   type RememberedFocus,
 } from '../application/gridNavigation';
 import { visibleLines, type Grid, type GridCell, type PersonLine } from '../application/gridView';
-import type { BreakdownItemId } from '../domain/ids';
+import type { Contribution } from '../application/overload';
+import type { YearMonth } from '../domain/calendar';
+import type { BreakdownItemId, EmployeeId } from '../domain/ids';
 import type { DisplayUnit } from '../domain/units';
 import { formatMonth, formatMonthShort } from './format';
 import styles from './StaffingGrid.module.css';
@@ -23,9 +25,17 @@ interface Props {
   readonly onToggle: (id: BreakdownItemId) => void;
   /** Takes a figure typed into a cell: the reason it is refused, or `null` once it is on its way. */
   readonly onEdit: (line: PersonLine, cell: GridCell, text: string) => string | null;
-  /** A person's row to bring the focus to, by line key; `onRevealed` says it has been done. */
-  readonly reveal: string | null;
+  /** A person's row to bring the focus to, by line key, at a month if it is shown; `onRevealed` says it was done. */
+  readonly reveal: { readonly key: string; readonly month: YearMonth | null } | null;
   readonly onRevealed: () => void;
+  /** The person's cell that has the focus, or `null` when the focus is elsewhere in the grid. */
+  readonly onInspect: (cell: InspectedCell | null) => void;
+}
+
+export interface InspectedCell {
+  readonly item: BreakdownItemId;
+  readonly employee: EmployeeId;
+  readonly month: YearMonth;
 }
 
 /** The cell is named by its row's key, not its place: rows move when People or the plan arrive. */
@@ -38,7 +48,7 @@ interface Editing {
 
 const NO_MODIFIERS: Modifiers = { ctrl: false, alt: false, shift: false, meta: false };
 
-const classes = (...names: (string | false | undefined)[]): string =>
+const classes = (...names: (string | false | null | undefined)[]): string =>
   names.filter(Boolean).join(' ');
 
 /** The body or footer cell an event came from, by the position it was rendered at. */
@@ -78,6 +88,7 @@ export function StaffingGrid({
   onEdit,
   reveal,
   onRevealed,
+  onInspect,
 }: Props) {
   const table = useRef<HTMLTableElement>(null);
   const errorId = useId();
@@ -111,8 +122,10 @@ export function StaffingGrid({
 
   useEffect(() => {
     if (reveal === null) return;
-    const row = lines.findIndex((line) => line.key === reveal);
-    const first = lines[row]?.cells.findIndex((cell) => cell.active) ?? -1;
+    const row = lines.findIndex((line) => line.key === reveal.key);
+    const cells = lines[row]?.cells ?? [];
+    const named = cells.findIndex((cell) => cell.month === reveal.month);
+    const first = named === -1 ? cells.findIndex((cell) => cell.active) : named;
     if (first !== -1) focusCell(table.current, { row, column: first + 1 });
     onRevealed();
   }, [reveal, lines, onRevealed]);
@@ -224,6 +237,57 @@ export function StaffingGrid({
     tabIndex: row === tabStop.row && column === tabStop.column ? 0 : -1,
   });
 
+  /** What a hover says: the person's load, who is blamed, and the days without a rate. */
+  const cellTitle = (each: GridCell, name: string): string | undefined => {
+    const { overCapacity: over, unpriced } = each;
+    const parts: string[] = [];
+    if (over) {
+      const percent = `${formatSteps(over.percentSteps, 'capacityPercent')} %`;
+      const [latest, ...rest] = over.contributions;
+      const where = (c: Contribution) => `${c.project.name} › ${c.path}`;
+      parts.push(`${name} is at ${percent} of capacity in ${formatMonth(each.month)}.`);
+      if (over.isLatestEdit) {
+        parts.push('Blamed on this allocation, the one edited last.');
+        if (rest.length > 0) parts.push(`Also in the month: ${rest.map(where).join('; ')}.`);
+      } else if (latest) {
+        parts.push(`Adds to it. The allocation edited last is ${where(latest)}.`);
+      }
+    }
+    if (unpriced) {
+      parts.push(
+        `No rate for ${String(unpriced.days)} of ${String(unpriced.workingDays)} working days: they cost nothing here.`,
+      );
+    }
+    return parts.length === 0 ? undefined : parts.join(' ');
+  };
+
+  const marks = (each: GridCell) => (
+    <>
+      {each.overCapacity?.isLatestEdit ? (
+        <span className={styles.mark} aria-hidden="true">
+          †
+        </span>
+      ) : null}
+      {each.overCapacity ? (
+        <span className={styles.srOnly}>
+          {each.overCapacity.isLatestEdit
+            ? ' over capacity, edited last'
+            : ' adds to an over-capacity month'}
+        </span>
+      ) : null}
+      {each.unpriced ? (
+        <>
+          <span className={styles.mark} aria-hidden="true">
+            ◇
+          </span>
+          <span className={styles.srOnly}>
+            {` no rate for ${String(each.unpriced.days)} of ${String(each.unpriced.workingDays)} working days`}
+          </span>
+        </>
+      ) : null}
+    </>
+  );
+
   const figure = (steps: number, derived: boolean): string =>
     derived && steps === 0 ? '–' : formatSteps(steps, unit);
 
@@ -236,7 +300,17 @@ export function StaffingGrid({
         className={styles.grid}
         onFocus={(event) => {
           const at = positionOf(event);
-          if (at) remember(at);
+          if (!at) return;
+          remember(at);
+          const key = lines[at.row]?.key;
+          const target = key === undefined ? null : personCellOf(key, at.column);
+          onInspect(
+            target && {
+              item: target.line.item.id,
+              employee: target.line.employeeId,
+              month: target.cell.month,
+            },
+          );
         }}
         onDoubleClick={(event) => {
           if (event.target instanceof HTMLInputElement) return;
@@ -303,10 +377,13 @@ export function StaffingGrid({
                     key={each.month}
                     aria-disabled={each.active ? undefined : true}
                     aria-readonly={derived ? true : undefined}
+                    title={line.kind === 'person' ? cellTitle(each, line.name) : undefined}
                     className={classes(
                       styles.number,
                       !each.active && styles.inactive,
                       each.allocation !== null && styles.planned,
+                      each.overCapacity &&
+                        (each.overCapacity.isLatestEdit ? styles.cause : styles.contributor),
                     )}
                     {...cell(row, index + 1)}
                   >
@@ -328,7 +405,10 @@ export function StaffingGrid({
                         onBlur={onInputBlur}
                       />
                     ) : each.active && (derived || each.allocation !== null) ? (
-                      figure(each.steps, derived)
+                      <>
+                        {figure(each.steps, derived)}
+                        {line.kind === 'person' ? marks(each) : null}
+                      </>
                     ) : (
                       ''
                     )}

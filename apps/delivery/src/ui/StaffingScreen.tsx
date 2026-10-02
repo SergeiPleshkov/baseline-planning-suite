@@ -1,10 +1,10 @@
 import type { DisplayCurrency } from '@baseline/host-contract';
 import { useCallback, useMemo, useState } from 'react';
+import { explainCell } from '../application/calculation';
 import { personMonthsFromEntry } from '../application/cellEntry';
 import type { DeliveryStore } from '../application/deliveryStore';
 import {
   buildGrid,
-  byText,
   conversionFor,
   personKey,
   projectHorizon,
@@ -15,14 +15,19 @@ import {
   type Horizon,
   type PersonLine,
 } from '../application/gridView';
+import { cellInProject, overloads, type OverloadEntry } from '../application/overload';
+import { byText } from '../application/sorting';
 import type { StaffStore } from '../application/staffStore';
 import { expandPathTo, leafOptions } from '../application/treeView';
+import type { YearMonth } from '../domain/calendar';
 import type { BreakdownItemId, EmployeeId } from '../domain/ids';
 import type { Plan, Project } from '../domain/plan';
 import { DISPLAY_UNITS, isPlainUnit, type DisplayUnit } from '../domain/units';
 import { AssignDialog } from './AssignDialog';
 import { formatMonthShort } from './format';
-import { StaffingGrid } from './StaffingGrid';
+import { CalculationPanel } from './CalculationPanel';
+import { OverloadList } from './OverloadList';
+import { StaffingGrid, type InspectedCell } from './StaffingGrid';
 import styles from './StaffingScreen.module.css';
 import { useStaffView } from './useDeliveryStore';
 
@@ -60,7 +65,8 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
   const [retrying, setRetrying] = useState(false);
   const [assigned, setAssigned] = useState<readonly Assignment[]>([]);
   const [assigning, setAssigning] = useState(false);
-  const [reveal, setReveal] = useState<string | null>(null);
+  const [reveal, setReveal] = useState<{ key: string; month: YearMonth | null } | null>(null);
+  const [inspected, setInspected] = useState<InspectedCell | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const ownSpan = useMemo(() => projectHorizon(project), [project]);
@@ -80,6 +86,10 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
       }),
     [plan, project, horizon, unit, currency.ratePerEur, known, assigned],
   );
+
+  const waitingForPeople = people.status === 'loading' && !isPlainUnit(unit);
+  // Only a grid that is on screen can take the focus: a request to reveal must not wait for one.
+  const gridShown = !waitingForPeople && built.status === 'ready';
 
   const assign = (item: BreakdownItemId, employee: EmployeeId) => {
     setAssigned((current) =>
@@ -122,8 +132,62 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
       next.delete(item);
       return next;
     });
-    setReveal(personKey(item, employee));
+    if (gridShown) setReveal({ key: personKey(item, employee), month: null });
   };
+
+  const nameOf = (employee: EmployeeId): string => known?.staff.get(employee)?.name ?? employee;
+
+  const overloaded = useMemo(
+    () =>
+      overloads(plan)
+        .filter((entry) => entry.contributions.some((each) => each.project.id === project.id))
+        .sort(
+          (a, b) =>
+            byText(
+              known?.staff.get(a.employeeId)?.name ?? a.employeeId,
+              known?.staff.get(b.employeeId)?.name ?? b.employeeId,
+            ) || byText(a.month, b.month),
+        ),
+    [plan, project, known],
+  );
+
+  const showOverload = (entry: OverloadEntry) => {
+    const target = cellInProject(entry, project.id);
+    if (!target || !gridShown) return;
+    if (entry.month < horizon.first || entry.month > horizon.last) setChosen(null);
+    setCollapsed((current) => {
+      const next = new Set(expandPathTo(plan, target.item, current));
+      next.delete(target.item);
+      return next;
+    });
+    setReveal({ key: personKey(target.item, target.employee), month: target.month });
+  };
+
+  const inspect = useCallback((cell: InspectedCell | null) => {
+    setInspected((current) =>
+      current?.item === cell?.item &&
+      current?.employee === cell?.employee &&
+      current?.month === cell?.month
+        ? current
+        : cell,
+    );
+  }, []);
+
+  const calculation = useMemo(
+    () =>
+      inspected === null || !plan.items.has(inspected.item)
+        ? null
+        : explainCell({
+            plan,
+            item: inspected.item,
+            employee: inspected.employee,
+            month: inspected.month,
+            staff: known?.staff ?? null,
+            rates: known?.rates ?? null,
+            currencyPerEur: currency.ratePerEur,
+          }),
+    [plan, inspected, known, currency.ratePerEur],
+  );
 
   const revealed = useCallback(() => {
     setReveal(null);
@@ -140,7 +204,6 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
   // The banner stays while a retry is under way, so that the Retry button the person pressed is
   // still there and keeps the focus.
   const showBanner = people.status === 'failed' || (people.status === 'loading' && retrying);
-  const waitingForPeople = people.status === 'loading' && !isPlainUnit(unit);
 
   return (
     <div className={styles.staffing}>
@@ -265,12 +328,23 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
           onEdit={edit}
           reveal={reveal}
           onRevealed={revealed}
+          onInspect={inspect}
         />
       )}
+      <OverloadList
+        entries={overloaded}
+        canShow={gridShown}
+        project={project.id}
+        nameOf={nameOf}
+        onShow={showOverload}
+      />
+      <CalculationPanel calculation={calculation} currency={currency} />
       <p className={styles.legend}>
-        Enter or F2 edits a person’s cell, a digit starts a new figure, Delete clears it; Enter
-        saves and moves down, Tab moves along, Escape drops the text. Figures are rounded together,
-        so every total is the sum of the figures it covers. Shaded months are outside the project.
+        † marks the allocation edited last in a month over capacity, and the other contributions to
+        that month are tinted; ◇ marks a cost with days that have no rate. Enter or F2 edits a
+        person’s cell, a digit starts a new figure, Delete clears it; Enter saves and moves down,
+        Tab moves along, Escape drops the text. Figures are rounded together, so every total is the
+        sum of the figures it covers. Shaded months are outside the project.
       </p>
 
       {assigning && known !== null ? (
