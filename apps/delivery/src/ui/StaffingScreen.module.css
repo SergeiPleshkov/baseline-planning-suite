@@ -109,3 +109,16 @@
   color: #5a6472;
   font-size: 12px;
 }
+
+.stale {
+  margin: 0;
+  padding: 8px 12px;
+  color: #6b4a00;
+  background: #fff6dd;
+  border: 1px solid #ecd9a0;
+  border-radius: 6px;
+}
+
+.stale p {
+  margin: 0 0 8px;
+}

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Fetch } from './http';
-import { createPeopleGateway } from './peopleGateway';
+import { createPeopleFeed, createPeopleGateway } from './peopleGateway';
 import { loadRemoteConfig } from './remoteConfig';
-import { createWorkloadGateway } from './workloadGateway';
+import { createWorkloadFeed, createWorkloadGateway } from './workloadGateway';
 
 const json = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status }));
@@ -151,5 +151,47 @@ describe('loadRemoteConfig', () => {
     await expect(
       loadRemoteConfig(() => json({ peopleApi: '/x' }), 'http://h/', 'http://page/'),
     ).rejects.toThrow();
+  });
+});
+
+describe('Workload feed', () => {
+  it('listens for workload-changed on Delivery’s events address', () => {
+    const listened: string[] = [];
+    let url = '';
+    const feed = createWorkloadFeed({
+      baseUrl: '/api/delivery/v1/',
+      eventSource: (address) => {
+        url = address;
+        return {
+          readyState: 0,
+          addEventListener: (type) => listened.push(type),
+          close: () => undefined,
+        };
+      },
+    });
+    feed.open({ onChange: () => undefined, onConnected: () => undefined, onLost: () => undefined });
+    expect(url).toBe('/api/delivery/v1/events');
+    expect(listened).toContain('workload-changed');
+  });
+});
+
+describe('People feed', () => {
+  it('listens for rates-changed on People’s events address', () => {
+    const listened: string[] = [];
+    let url = '';
+    const feed = createPeopleFeed({
+      baseUrl: '/api/people/v1',
+      eventSource: (address) => {
+        url = address;
+        return {
+          readyState: 0,
+          addEventListener: (type) => listened.push(type),
+          close: () => undefined,
+        };
+      },
+    });
+    feed.open({ onChange: () => undefined, onConnected: () => undefined, onLost: () => undefined });
+    expect(url).toBe('/api/people/v1/events');
+    expect(listened).toContain('rates-changed');
   });
 });

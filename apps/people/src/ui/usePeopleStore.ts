@@ -4,9 +4,9 @@ import {
   type PeopleSnapshot,
   type PeopleStore,
 } from '../application/peopleStore';
-import { createPeopleGateway } from '../infrastructure/peopleGateway';
+import { createPeopleFeed, createPeopleGateway } from '../infrastructure/peopleGateway';
 import { loadRemoteConfig } from '../infrastructure/remoteConfig';
-import { createWorkloadGateway } from '../infrastructure/workloadGateway';
+import { createWorkloadFeed, createWorkloadGateway } from '../infrastructure/workloadGateway';
 
 export type Runtime =
   | { readonly status: 'starting' }
@@ -20,6 +20,7 @@ export function usePeopleRuntime(): { runtime: Runtime; restart: () => void } {
 
   useEffect(() => {
     let cancelled = false;
+    let stopFollowing: () => void = () => undefined;
     setRuntime({ status: 'starting' });
     const fetchImpl = (input: string, init?: RequestInit) => fetch(input, init);
     loadRemoteConfig(fetchImpl, __webpack_public_path__, window.location.href).then(
@@ -31,6 +32,14 @@ export function usePeopleRuntime(): { runtime: Runtime; restart: () => void } {
         });
         setRuntime({ status: 'ready', store });
         void store.load();
+        const stopRates = store.followRates(createPeopleFeed({ baseUrl: config.peopleApi }));
+        const stopWorkload = store.followWorkload(
+          createWorkloadFeed({ baseUrl: config.deliveryApi }),
+        );
+        stopFollowing = () => {
+          stopRates();
+          stopWorkload();
+        };
       },
       (error: unknown) => {
         if (cancelled) return;
@@ -42,6 +51,7 @@ export function usePeopleRuntime(): { runtime: Runtime; restart: () => void } {
     );
     return () => {
       cancelled = true;
+      stopFollowing();
     };
   }, [attempt]);
 

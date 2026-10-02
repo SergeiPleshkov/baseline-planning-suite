@@ -1,5 +1,5 @@
 import type { DisplayCurrency } from '@baseline/host-contract';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { explainCell } from '../application/calculation';
 import { personMonthsFromEntry } from '../application/cellEntry';
 import type { DeliveryStore } from '../application/deliveryStore';
@@ -63,6 +63,9 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
   const [chosen, setChosen] = useState<Horizon | null>(null);
   const [collapsed, setCollapsed] = useState<ReadonlySet<BreakdownItemId>>(new Set());
   const [retrying, setRetrying] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const unitsGroup = useRef<HTMLFieldSetElement>(null);
+  const refocusUnits = useRef(false);
   const [assigned, setAssigned] = useState<readonly Assignment[]>([]);
   const [assigning, setAssigning] = useState(false);
   const [reveal, setReveal] = useState<{ key: string; month: YearMonth | null } | null>(null);
@@ -193,6 +196,13 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
     setReveal(null);
   }, []);
 
+  const outOfDate = Boolean(known?.stale);
+  useEffect(() => {
+    if (outOfDate || !refocusUnits.current) return;
+    refocusUnits.current = false;
+    unitsGroup.current?.querySelector<HTMLInputElement>('input:checked')?.focus();
+  }, [outOfDate]);
+
   const toggle = (id: BreakdownItemId) => {
     setCollapsed((current) => {
       const next = new Set(current);
@@ -228,8 +238,30 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
         </div>
       ) : null}
 
+      {known?.stale ? (
+        <div role="status" className={styles.stale}>
+          <p>Hours and cost use what People last sent, which may be out of date: {known.stale}</p>
+          <button
+            type="button"
+            aria-disabled={refreshing}
+            onClick={() => {
+              if (refreshing) return;
+              setRefreshing(true);
+              void staff.load().finally(() => {
+                // The banner goes with a good read, and the button that had the focus with it.
+                const view = staff.getSnapshot();
+                refocusUnits.current = view.status === 'ready' && view.stale === null;
+                setRefreshing(false);
+              });
+            }}
+          >
+            {refreshing ? 'Reading People…' : 'Refresh'}
+          </button>
+        </div>
+      ) : null}
+
       <div className={styles.toolbar}>
-        <fieldset className={styles.units}>
+        <fieldset ref={unitsGroup} className={styles.units}>
           <legend>Unit</legend>
           {DISPLAY_UNITS.map((each) => (
             <label key={each} className={each === unit ? styles.unitOn : styles.unit}>

@@ -1,10 +1,12 @@
 import {
   EmployeesResponseSchema,
   PEOPLE_API_PATHS,
+  RatesChangedEventSchema,
   RatesResponseSchema,
 } from '@baseline/people-contract';
 import { z } from 'zod';
-import type { CommandResult, PeopleGateway } from '../application/ports';
+import type { ChangeFeed, CommandResult, PeopleGateway } from '../application/ports';
+import { createChangeFeed, type EventSourceFactory } from './changeFeed';
 import { browserFetch, getJson, joinUrl, TIMEOUT_MS, type Fetch } from './http';
 
 const ErrorBodySchema = z.object({ error: z.object({ message: z.string() }) });
@@ -54,3 +56,14 @@ export function createPeopleGateway(options: {
     clearRates: (employeeId) => command('DELETE', `/employees/${enc(employeeId)}/rates`),
   };
 }
+
+/** People's own `rates-changed` notices, so that a change made elsewhere shows here too. */
+export const createPeopleFeed = (options: {
+  readonly baseUrl: string;
+  readonly eventSource?: EventSourceFactory;
+}): ChangeFeed =>
+  createChangeFeed({
+    url: joinUrl(options.baseUrl, PEOPLE_API_PATHS.events),
+    eventName: RatesChangedEventSchema.shape.type.value,
+    ...(options.eventSource ? { eventSource: options.eventSource } : {}),
+  });

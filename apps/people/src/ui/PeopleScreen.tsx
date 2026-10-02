@@ -61,7 +61,7 @@ export function PeopleScreen({ host, store }: Props) {
     <div className={styles.layout}>
       {register.stale === null ? null : (
         <div role="alert" className={styles.stale}>
-          <p>The list could not be refreshed, so it may be out of date: {register.stale}</p>
+          <p>The list may be out of date: {register.stale}</p>
           <button
             type="button"
             onClick={() => {

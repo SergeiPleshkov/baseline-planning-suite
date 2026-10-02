@@ -30,3 +30,17 @@ export interface PeopleGateway {
 export interface WorkloadGateway {
   workload: () => Promise<WorkloadResponse>;
 }
+
+export interface FeedHandlers {
+  /** An event arrived that says the data changed: read it again. */
+  readonly onChange: () => void;
+  /** The stream opened, now or again after a break; events in between may have been missed. */
+  readonly onConnected: () => void;
+  /** The stream broke; it keeps trying to reopen, and `onConnected` follows when it does. */
+  readonly onLost: () => void;
+}
+
+/** A stream of "this changed" notices from another service. Opening returns how to close it. */
+export interface ChangeFeed {
+  open: (handlers: FeedHandlers) => () => void;
+}

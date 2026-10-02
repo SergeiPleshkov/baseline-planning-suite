@@ -6,7 +6,7 @@ import {
 } from '../application/deliveryStore';
 import { createStaffStore, type StaffStore, type StaffView } from '../application/staffStore';
 import { createDeliveryGateway } from '../infrastructure/deliveryGateway';
-import { createPeopleSource } from '../infrastructure/peopleGateway';
+import { createPeopleFeed, createPeopleSource } from '../infrastructure/peopleGateway';
 import { loadRemoteConfig } from '../infrastructure/remoteConfig';
 
 export type Runtime =
@@ -21,6 +21,7 @@ export function useDeliveryRuntime(): { runtime: Runtime; restart: () => void } 
 
   useEffect(() => {
     let cancelled = false;
+    let stopFollowing: () => void = () => undefined;
     setRuntime({ status: 'starting' });
     const fetchImpl = (input: string, init?: RequestInit) => fetch(input, init);
     loadRemoteConfig(fetchImpl, __webpack_public_path__, window.location.href).then(
@@ -31,6 +32,7 @@ export function useDeliveryRuntime(): { runtime: Runtime; restart: () => void } 
         setRuntime({ status: 'ready', store, staff });
         void store.load();
         void staff.load();
+        stopFollowing = staff.follow(createPeopleFeed({ baseUrl: config.peopleApi }));
       },
       (error: unknown) => {
         if (cancelled) return;
@@ -42,6 +44,7 @@ export function useDeliveryRuntime(): { runtime: Runtime; restart: () => void } 
     );
     return () => {
       cancelled = true;
+      stopFollowing();
     };
   }, [attempt]);
 

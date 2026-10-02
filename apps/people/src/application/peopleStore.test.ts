@@ -1,11 +1,17 @@
 import type { WorkloadResponse } from '@baseline/delivery-contract';
 import type { RatesResponse } from '@baseline/people-contract';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isoDate } from '../domain/calendar';
 import { employeeId, rateId } from '../domain/ids';
 import { rateOn } from '../domain/rates';
 import { createPeopleStore } from './peopleStore';
-import type { CommandResult, PeopleGateway, WorkloadGateway } from './ports';
+import type {
+  ChangeFeed,
+  CommandResult,
+  FeedHandlers,
+  PeopleGateway,
+  WorkloadGateway,
+} from './ports';
 
 const EMPLOYEES = {
   revision: 1,
@@ -165,7 +171,7 @@ describe('load', () => {
     await reloading;
   });
 
-  it('does not let a slow old read undo a newer one', async () => {
+  it('runs a read asked for during a slow one after it, so that the newer state wins', async () => {
     const { people, workload } = fakes();
     let release = () => {};
     let first = true;
@@ -186,9 +192,9 @@ describe('load', () => {
       workload,
     });
     const slow = store.load();
-    await store.load();
+    const asked = store.load();
     release();
-    await slow;
+    await Promise.all([slow, asked]);
     const { register } = store.getSnapshot();
     if (register.status !== 'ready') throw new Error('not ready');
     expect(register.histories.get(employeeId('e1'))?.records).toHaveLength(1);
@@ -322,7 +328,7 @@ describe('reloadWorkload', () => {
     expect(registerReads).toBe(1);
   });
 
-  it('does not let a slow old answer from Delivery undo a newer one', async () => {
+  it('runs a read of Delivery asked for during a slow one after it, so that the newer state wins', async () => {
     const { people } = fakes();
     let calls = 0;
     let failSlowly = () => {};
@@ -343,9 +349,9 @@ describe('reloadWorkload', () => {
       },
     });
     const first = store.load();
-    await store.reloadWorkload();
+    const asked = store.reloadWorkload();
     failSlowly();
-    await first;
+    await Promise.all([first, asked]);
     expect(store.getSnapshot().workload.status).toBe('ready');
   });
 });
@@ -371,5 +377,426 @@ describe('subscribe', () => {
     const store = createPeopleStore({ people, workload });
     await store.load();
     expect(store.getSnapshot()).toBe(store.getSnapshot());
+  });
+});
+
+function fakeFeed() {
+  let handlers: FeedHandlers | undefined;
+  const feed: ChangeFeed = {
+    open(next) {
+      handlers = next;
+      return () => {
+        handlers = undefined;
+      };
+    },
+  };
+  return {
+    feed,
+    isOpen: () => handlers !== undefined,
+    change: () => handlers?.onChange(),
+    connect: () => handlers?.onConnected(),
+    lose: () => handlers?.onLost(),
+  };
+}
+
+const workloadOf = (store: ReturnType<typeof createPeopleStore>) => store.getSnapshot().workload;
+
+describe('followWorkload', () => {
+  const entry = (personMonths: number): WorkloadResponse => ({
+    revision: 1,
+    entries: [{ employeeId: 'e1', month: '2026-06', personMonths, status: 'within' }],
+  });
+  const monthOf = (store: ReturnType<typeof createPeopleStore>) => {
+    const view = workloadOf(store);
+    if (view.status !== 'ready') throw new Error(`expected ready, got ${view.status}`);
+    return view.byEmployee.get(employeeId('e1'))?.months[0]?.personMonths;
+  };
+
+  it('reads Delivery’s figures again when it says they changed, keeping the old ones meanwhile', async () => {
+    let current = entry(0.5);
+    const { people, workload } = fakes({ workload: () => Promise.resolve(current) });
+    const store = createPeopleStore({ people, workload });
+    await store.load();
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    const statuses: string[] = [];
+    store.subscribe(() => {
+      statuses.push(workloadOf(store).status);
+    });
+
+    current = entry(0.9);
+    live.change();
+    await vi.waitFor(() => {
+      expect(monthOf(store)).toBe(0.9);
+    });
+    expect(statuses.every((status) => status === 'ready')).toBe(true);
+  });
+
+  it('reads again each time the stream opens, since events in between may have been missed', async () => {
+    const workloadRead = vi.fn(() => Promise.resolve(entry(0.5)));
+    const { people } = fakes();
+    const store = createPeopleStore({ people, workload: { workload: workloadRead } });
+    await store.load();
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    live.connect();
+    await vi.waitFor(() => {
+      expect(workloadRead).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('reads once more when a change is announced during a read, so that it is not lost', async () => {
+    let current = entry(0.5);
+    let hold: Promise<void> | null = null;
+    let release: () => void = () => undefined;
+    const { people } = fakes();
+    const store = createPeopleStore({
+      people,
+      workload: {
+        workload: async () => {
+          const answer = current;
+          if (hold) await hold;
+          return answer;
+        },
+      },
+    });
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    live.connect();
+    current = entry(0.9);
+    live.change();
+    hold = null;
+    release();
+    await vi.waitFor(() => {
+      expect(monthOf(store)).toBe(0.9);
+    });
+  });
+
+  it('says capacity is unknown when the stream breaks, and recovers when it reopens', async () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    await store.load();
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    live.lose();
+    expect(workloadOf(store)).toMatchObject({
+      status: 'unavailable',
+      message: expect.stringContaining('Live updates from Delivery stopped') as string,
+    });
+    live.lose();
+    live.connect();
+    await vi.waitFor(() => {
+      expect(workloadOf(store).status).toBe('ready');
+    });
+  });
+
+  it('has nothing to say about a stream that breaks before any figures were shown', async () => {
+    const { people } = fakes();
+    const store = createPeopleStore({
+      people,
+      workload: { workload: () => Promise.reject(new Error('Delivery is down')) },
+    });
+    await store.load();
+    const before = workloadOf(store);
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    live.lose();
+    expect(workloadOf(store)).toBe(before);
+  });
+
+  it('shows the figures as unavailable when a read after an event fails', async () => {
+    let down = false;
+    const { people } = fakes();
+    const store = createPeopleStore({
+      people,
+      workload: {
+        workload: () =>
+          down ? Promise.reject(new Error('Delivery is down')) : Promise.resolve(entry(0.5)),
+      },
+    });
+    await store.load();
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    down = true;
+    live.change();
+    await vi.waitFor(() => {
+      expect(workloadOf(store)).toEqual({ status: 'unavailable', message: 'Delivery is down' });
+    });
+  });
+
+  it('stops listening when told to stop', () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    const live = fakeFeed();
+    const stop = store.followWorkload(live.feed);
+    expect(live.isOpen()).toBe(true);
+    stop();
+    expect(live.isOpen()).toBe(false);
+  });
+});
+
+describe('followRates', () => {
+  const rateOf = (store: ReturnType<typeof createPeopleStore>) => {
+    const { register } = store.getSnapshot();
+    if (register.status !== 'ready') throw new Error(`expected ready, got ${register.status}`);
+    const history = register.histories.get(employeeId('e1'));
+    return history && rateOn(history, isoDate('2026-01-01'));
+  };
+
+  it('reads the register again when rates changed elsewhere, without going back to loading', async () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    await store.load();
+    const live = fakeFeed();
+    store.followRates(live.feed);
+    const statuses: string[] = [];
+    store.subscribe(() => {
+      statuses.push(store.getSnapshot().register.status);
+    });
+
+    await people.correctRate('r1', { hourlyRateEur: 90 });
+    live.change();
+    await vi.waitFor(() => {
+      expect(rateOf(store)).toBe(90);
+    });
+    expect(statuses.every((status) => status === 'ready')).toBe(true);
+  });
+
+  it('reads again each time the stream opens, since events in between may have been missed', async () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    await store.load();
+    const live = fakeFeed();
+    store.followRates(live.feed);
+    await people.correctRate('r1', { hourlyRateEur: 91 });
+    live.connect();
+    await vi.waitFor(() => {
+      expect(rateOf(store)).toBe(91);
+    });
+  });
+
+  it('marks the register as possibly out of date when the stream breaks, and clears it on reopening', async () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    await store.load();
+    const live = fakeFeed();
+    store.followRates(live.feed);
+    live.lose();
+    const lost = store.getSnapshot().register;
+    expect(lost.status === 'ready' && lost.stale).toContain('Live updates from People stopped');
+    live.lose();
+    expect(store.getSnapshot().register).toBe(lost);
+
+    live.connect();
+    await vi.waitFor(() => {
+      const register = store.getSnapshot().register;
+      expect(register.status === 'ready' && register.stale).toBeNull();
+    });
+  });
+
+  it('keeps the register on screen, marked, when a read after an event fails', async () => {
+    let down = false;
+    const { people, workload } = fakes();
+    const store = createPeopleStore({
+      people: {
+        ...people,
+        rates: () => (down ? Promise.reject(new Error('People is down')) : people.rates()),
+      },
+      workload,
+    });
+    await store.load();
+    const live = fakeFeed();
+    store.followRates(live.feed);
+    down = true;
+    live.change();
+    await vi.waitFor(() => {
+      const register = store.getSnapshot().register;
+      expect(register.status === 'ready' && register.stale).toBe('People is down');
+    });
+    expect(rateOf(store)).toBe(80);
+  });
+
+  it('has nothing to mark before the register was read, and stops when told to stop', () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    const live = fakeFeed();
+    const stop = store.followRates(live.feed);
+    live.lose();
+    expect(store.getSnapshot().register).toEqual({ status: 'loading' });
+    stop();
+    expect(live.isOpen()).toBe(false);
+  });
+});
+
+describe('what a stream break and a failed read each say', () => {
+  it('keeps the register marked while the stream is broken, whatever a read finds', async () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    await store.load();
+    const live = fakeFeed();
+    store.followRates(live.feed);
+    live.lose();
+    await store.load();
+    const { register } = store.getSnapshot();
+    expect(register.status === 'ready' && register.stale).toContain('Live updates from People');
+  });
+
+  it('keeps capacity unknown while Delivery’s stream is broken, even when a read succeeds', async () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    live.lose();
+    await store.load();
+    expect(workloadOf(store)).toMatchObject({ status: 'unavailable' });
+    live.connect();
+    await vi.waitFor(() => {
+      expect(workloadOf(store).status).toBe('ready');
+    });
+  });
+
+  it('marks a stream that breaks while a read is under way', async () => {
+    const { people } = fakes();
+    let release: () => void = () => undefined;
+    const store = createPeopleStore({
+      people,
+      workload: {
+        workload: async () => {
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          return { revision: 1, entries: [] };
+        },
+      },
+    });
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    const reading = store.load();
+    live.lose();
+    release();
+    await reading;
+    expect(workloadOf(store).status).toBe('unavailable');
+  });
+
+  it('resolves a command only after the read that follows it, whatever else was announced meanwhile', async () => {
+    const { people, workload } = fakes();
+    const store = createPeopleStore({ people, workload });
+    await store.load();
+    const live = fakeFeed();
+    store.followRates(live.feed);
+    const saved = store.correctRate(rateId('r1'), { hourlyRateEur: 92 });
+    live.change();
+    await saved;
+    const { register } = store.getSnapshot();
+    const history =
+      register.status === 'ready' ? register.histories.get(employeeId('e1')) : undefined;
+    expect(history && rateOn(history, isoDate('2026-01-01'))).toBe(92);
+  });
+});
+
+describe('trying again after a failed read', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function flaky() {
+    const state = { failing: true, times: [] as number[] };
+    const { people } = fakes();
+    const store = createPeopleStore({
+      people,
+      workload: {
+        workload: () => {
+          state.times.push(Date.now());
+          return state.failing
+            ? Promise.reject(new Error('Delivery is down'))
+            : Promise.resolve({ revision: 1, entries: [] });
+        },
+      },
+    });
+    return { store, state };
+  }
+
+  it('reads again by itself while following, after a pause that doubles up to a limit', async () => {
+    const { store, state } = flaky();
+    store.followWorkload(fakeFeed().feed);
+    await store.load();
+    await vi.advanceTimersByTimeAsync(200_000);
+    const gaps = state.times.slice(1).map((time, index) => time - (state.times[index] ?? 0));
+    expect(gaps.slice(0, 7)).toEqual([2000, 4000, 8000, 16000, 30000, 30000, 30000]);
+  });
+
+  it('shows the figures once a later read succeeds', async () => {
+    const { store, state } = flaky();
+    store.followWorkload(fakeFeed().feed);
+    await store.load();
+    expect(workloadOf(store).status).toBe('unavailable');
+    state.failing = false;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(workloadOf(store).status).toBe('ready');
+    const reads = state.times.length;
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(state.times).toHaveLength(reads);
+  });
+
+  it('starts the pauses over after a good read', async () => {
+    const { store, state } = flaky();
+    const live = fakeFeed();
+    store.followWorkload(live.feed);
+    await store.load();
+    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(4000);
+    state.failing = false;
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(workloadOf(store).status).toBe('ready');
+
+    state.failing = true;
+    live.change();
+    await vi.advanceTimersByTimeAsync(0);
+    const failedAt = state.times.at(-1) ?? 0;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect((state.times.at(-1) ?? 0) - failedAt).toBe(2000);
+  });
+
+  it('does not try again by itself when nothing is following, or after it stopped following', async () => {
+    const unfollowed = flaky();
+    await unfollowed.store.load();
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(unfollowed.state.times).toHaveLength(1);
+
+    const followed = flaky();
+    const stop = followed.store.followWorkload(fakeFeed().feed);
+    await followed.store.load();
+    stop();
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(followed.state.times).toHaveLength(1);
+  });
+
+  it('does the same for the register', async () => {
+    let failing = true;
+    let reads = 0;
+    const { people, workload } = fakes();
+    const store = createPeopleStore({
+      people: {
+        ...people,
+        rates: () => {
+          reads += 1;
+          return failing ? Promise.reject(new Error('People is down')) : people.rates();
+        },
+      },
+      workload,
+    });
+    store.followRates(fakeFeed().feed);
+    await store.load();
+    expect(store.getSnapshot().register.status).toBe('failed');
+    failing = false;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(store.getSnapshot().register.status).toBe('ready');
+    expect(reads).toBe(2);
   });
 });

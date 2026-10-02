@@ -197,7 +197,9 @@ further.
 - **Monthly load** comes from Delivery's workload contract: every month with allocations as a share
   of the person's capacity, over-capacity months marked with text as well as colour.
 - **Without Delivery** the register and the rate editor keep working; the screen says the load
-  figures are not available and offers to try again.
+  figures are not available and offers to try again. The same happens while Delivery's event stream
+  is broken, since the figures cannot then be trusted to follow it, and they come back by themselves
+  once the stream reopens.
 - **Where it gets its data.** The remote reads `config.json` next to its own files (the shell does
   not pass it) to find the People and Delivery APIs, so the addresses are not in the bundle. The
   paths in it are resolved against the address of the page, which works behind the gateway and the
@@ -205,11 +207,27 @@ further.
   development the dev servers proxy `/api/people` and `/api/delivery` to the servers on :3011
   and :3012, like the gateway does.
 - **Structure.** State lives in `PeopleStore` (no React, tested on its own); React only subscribes
-  to it. The screen re-reads the rates after every change instead of patching its own copy. The
-  figures are read when the screen opens or on retry; they do not update by themselves yet. If a
-  refresh fails, what was on screen stays, marked as possibly out of date; a change whose answer
-  was lost is followed by a re-read, because it may have been saved. "Today" is the UTC date at the
-  moment the screen opens.
+  to it. The screen re-reads the rates after every change instead of patching its own copy.
+- **Live updates.** The register follows People's `rates-changed` stream and the load follows
+  Delivery's `workload-changed` stream (server-sent events), so a change made in another tab or by
+  someone else shows without reloading. An event only says that something changed, and nothing it
+  carries is read: the screen reads the data again, as it does after every (re)opening of a stream,
+  since events in between may have been missed, and one more read follows a change announced
+  during a read. Reads run one at a time. A stream that the server or the gateway refused (a 502
+  while a service restarts) is opened again after a pause that doubles up to 15 seconds, because
+  the browser does not retry those by itself.
+- **When People or Delivery is not reachable.** If a read of the register fails, or its stream
+  breaks, what was on screen stays, marked as possibly out of date; a read that failed is tried
+  again after a pause that doubles up to 30 seconds. Whether the stream is broken and whether the
+  last read failed are kept apart, so a good read does not hide a broken stream. Delivery's load
+  is shown as unavailable ("load figures from Delivery are not available") while that stream is
+  broken or a read of it fails, and comes back by itself. A change whose answer was lost is
+  followed by a re-read, because it may have been saved. "Today" is the UTC date at the moment the
+  screen opens.
+- **Limits.** Each open page keeps its streams open: People holds two (its own and Delivery's),
+  Delivery one. Browsers allow about six connections per address over HTTP/1.1, which is what the
+  gateway speaks, so a handful of tabs can fill that budget. A connection that dies without
+  closing (a laptop that slept) is not noticed until the browser reports it.
 
 ## The Delivery screen: work breakdown
 
@@ -236,7 +254,7 @@ goes to its parent, Home and End jump), and the row that has the focus is the se
   is always shown where it was asked for. The selected item is always visible: it is opened to
   when it is added or moved, and closing a parent that holds it selects the parent.
 - **If the service cannot be read** the plan on screen stays, marked as possibly out of date, with a
-  Retry. The figures do not update by themselves yet.
+  Retry. The plan does not follow changes made elsewhere yet.
 
 ## The Delivery screen: staffing grid
 
@@ -290,7 +308,12 @@ item's name opens or closes it.
   history, both read from People's API at the address in `peopleApi` of the remote's `config.json`.
   If People cannot be read, person-months and percent still show, with people named by id; the
   screen says what is missing and offers Retry, and hours and cost say why they are not shown.
-  The data is read when the Delivery remote starts and does not update by itself yet.
+  The data is read when the Delivery remote starts and again whenever People announces that rates
+  changed, in the same tab or another, without the grid going blank or losing the focus. If a read
+  fails or People's stream breaks, the data on screen stays and a banner says it may be out of date,
+  with a Refresh button; a failed read is tried again after a pause that doubles up to 30 seconds,
+  the stream reopens by itself, and the banner goes once People has been read again and its
+  stream is up. Nothing is hidden meanwhile.
 - **State.** The unit, the months and the open rows stay while the Breakdown view is shown, and
   reset when another project is chosen.
 
