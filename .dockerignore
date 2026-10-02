@@ -10,3 +10,9 @@ IMPLEMENTATION_PLAN.md
 .env.*
 **/dist-server
 **/data
+**/test-results
+**/playwright-report
+.github
+scripts
+e2e/tests
+e2e/*.ts

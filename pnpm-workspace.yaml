@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - contracts/*
+  - e2e
 allowBuilds:
   esbuild: false
   unrs-resolver: false

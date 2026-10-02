@@ -123,6 +123,9 @@ People's rules (`apps/people/src/domain`):
 | `tsconfig.base.json`      | Strict compiler settings every package extends.                         |
 | `eslint.config.js`        | Type-aware lint rules (`no-explicit-any`, hooks, team-boundary checks). |
 | `docker-compose.yml`      | The three containers; each app's `Dockerfile` sits in its folder.       |
+| `e2e`                     | Browser tests (Playwright) of the running Docker stack.                 |
+| `scripts/smoke.mjs`       | Checks a running stack from outside: config, manifests, APIs, streams.  |
+| `.github/workflows`       | CI: checks, then the compose stack with smoke and browser tests.        |
 | `CLAUDE.md`, `.claude/`   | Project rules and guardrails for AI-assisted work with Claude Code.     |
 
 ## Development
@@ -137,6 +140,9 @@ pnpm typecheck
 pnpm lint
 pnpm build
 ```
+
+`pnpm test` runs the unit and property tests only; the running system is checked separately, see
+[Checks and CI](#checks-and-ci).
 
 Each remote also runs on its own: open http://localhost:3001 or http://localhost:3002.
 
@@ -351,3 +357,34 @@ Open http://localhost:8080. Three containers, one per deployable unit; only the 
   about two seconds, and `docker compose start people` followed by **Retry** brings it back.
 - Or stop a remote's dev server: its panel times out with a message; start the server again and
   press **Retry** — the remote loads without reloading the page.
+
+## Checks and CI
+
+Against a running stack (`docker compose up --build --detach --wait`), both reach it through the
+gateway on http://localhost:8080 only:
+
+```bash
+pnpm smoke      # node scripts/smoke.mjs [base-url] [--down=people,delivery]
+pnpm e2e        # Playwright, in e2e/
+```
+
+- **Smoke** checks that the shell and `/config.json` are served with same-origin remote entries,
+  that each manifest names its remote and its entry script loads, that People serves every employee
+  of the seed and Delivery every project, and that both event streams deliver their first bytes at
+  once, which fails if something in front of them buffers. `--down=people` is for a stack where
+  that service was stopped on purpose: its paths must answer with a gateway error while everything
+  else stays healthy.
+- **Browser tests** read the reference cell (Adaeze Okafor, March 2026) in all four units and in
+  USD, open its calculation, check that `?break=people` and `?break=delivery` take down one panel
+  and leave the other working, check that a wide staffing grid does not squeeze People when the two sit side by side, and correct her rate in People to see Delivery reprice without a
+  reload, on the same page and in another tab. The browser runs in the Auckland time zone, because
+  dates are UTC-only. The tests expect the seed data: a test puts Adaeze Okafor's second rate
+  (`rate-002`) back afterwards, also when it failed halfway, but any other edit made by hand stays;
+  `docker compose down -v` resets the stack. The first run needs a browser:
+  `pnpm --filter @baseline/e2e exec playwright install chromium`, or set
+  `E2E_BROWSER_CHANNEL=msedge` (or `chrome`) to use one that is installed. `E2E_BASE_URL` points
+  the tests at another address.
+- **CI** (`.github/workflows/ci.yml`) runs on every push to main and every pull request. The first
+  job installs with the lockfile frozen and runs format check, typecheck, lint, tests and build.
+  The second builds the three images, starts them, runs smoke, the browser tests, and smoke again
+  with People and then Delivery stopped.

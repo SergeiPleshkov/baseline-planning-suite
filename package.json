@@ -11,6 +11,8 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
+    "smoke": "node scripts/smoke.mjs",
+    "e2e": "pnpm --filter @baseline/e2e e2e",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

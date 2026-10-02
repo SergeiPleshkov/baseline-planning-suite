@@ -12,6 +12,8 @@ export default defineConfig(
       '**/dist-server/**',
       '**/data/**',
       '**/coverage/**',
+      '**/test-results/**',
+      '**/playwright-report/**',
       '**/node_modules/**',
     ],
   },
@@ -117,5 +119,18 @@ export default defineConfig(
   {
     files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    // ESLint knows no Node or web-platform globals without another package; only these few are used.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+      },
+    },
   },
 );
