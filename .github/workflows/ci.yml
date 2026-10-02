@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # The pnpm version comes from "packageManager" in package.json.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -41,15 +41,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --filter @baseline/e2e
       - run: pnpm --filter @baseline/e2e exec playwright install --with-deps chromium
-      - run: docker compose up --build --detach --wait
+      - run: docker compose up --build --detach --wait --wait-timeout 300
       - name: Smoke test
         run: node scripts/smoke.mjs
       - name: Browser tests
@@ -61,7 +61,7 @@ jobs:
           node scripts/smoke.mjs --down=people
       - name: Smoke test with Delivery stopped
         run: |
-          docker compose start --wait people
+          docker compose up --detach --wait --wait-timeout 120 people
           docker compose stop delivery
           node scripts/smoke.mjs --down=delivery
       - name: Container logs
@@ -69,7 +69,7 @@ jobs:
         run: |
           docker compose ps --all
           docker compose logs --no-color
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report

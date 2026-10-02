@@ -1,6 +1,6 @@
 # Build context is the repository root: docker build -f apps/shell/Dockerfile .
 FROM node:24-alpine AS build
-RUN npm install -g pnpm@12.8.1
+RUN npm install -g --allow-scripts=pnpm pnpm@12.8.1
 WORKDIR /repo
 
 # Only the lockfile decides what is downloaded, so this layer survives source changes.
