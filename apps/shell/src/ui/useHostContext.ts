@@ -1,6 +1,6 @@
 import { HOST_CONTRACT_VERSION, type HostContext } from '@baseline/host-contract';
 import { useMemo, useState } from 'react';
-import type { RuntimeConfig } from './runtimeConfig';
+import type { RuntimeConfig } from '../infrastructure/runtimeConfig';
 
 function readStored(key: string): string | null {
   try {

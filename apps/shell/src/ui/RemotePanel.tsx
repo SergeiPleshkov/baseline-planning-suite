@@ -2,7 +2,7 @@ import type { HostContext, RemoteAppProps } from '@baseline/host-contract';
 import { useEffect, useState, type ComponentType } from 'react';
 import { describeError } from './errors';
 import { RemoteBoundary } from './RemoteBoundary';
-import type { RemoteLoader, RemoteName } from './remotes';
+import type { RemoteLoader, RemoteName } from '../infrastructure/remotes';
 import styles from './RemotePanel.module.css';
 
 type PanelState =

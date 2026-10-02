@@ -1,18 +1,18 @@
 import type { MouseEvent, ReactNode } from 'react';
-import { hrefFor, navigate, useView, type View } from './navigation';
-import { RemotePanel } from './RemotePanel';
-import type { RemoteLoader, RemoteName } from './remotes';
-import type { RuntimeConfig } from './runtimeConfig';
-import styles from './Shell.module.css';
-import { useHostContext } from './useHostContext';
+import { hrefFor, navigate, useView, type View } from './ui/navigation';
+import { RemotePanel } from './ui/RemotePanel';
+import type { RemoteLoader, RemoteName } from './infrastructure/remotes';
+import type { RuntimeConfig } from './infrastructure/runtimeConfig';
+import styles from './ShellApp.module.css';
+import { useHostContext } from './ui/useHostContext';
 
-interface ShellProps {
+interface ShellAppProps {
   readonly config: RuntimeConfig;
   readonly loader: RemoteLoader;
   readonly outages: ReadonlySet<RemoteName>;
 }
 
-export function Shell({ config, loader, outages }: ShellProps) {
+export function ShellApp({ config, loader, outages }: ShellAppProps) {
   const view = useView();
   const { host, selectCurrency, selectUser } = useHostContext(config);
 

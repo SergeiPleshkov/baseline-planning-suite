@@ -1,6 +1,6 @@
 # The one public entry point: the shell, and the same-origin paths to each remote and its API.
-# Upstreams are resolved per request, so the gateway starts and stays up while a remote is down;
-# only that remote's paths answer 502 and its panel shows the failure.
+# Upstreams are looked up as requests come in, not at start-up, so the gateway starts and stays up
+# while a remote is down; only that remote's paths answer 502 and its panel shows the failure.
 resolver 127.0.0.11 valid=5s ipv6=off;
 resolver_timeout 2s;
 

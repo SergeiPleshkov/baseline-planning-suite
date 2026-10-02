@@ -5,7 +5,7 @@ export type View = (typeof VIEWS)[number];
 
 const DEFAULT_VIEW: View = 'people';
 
-function viewFromPath(pathname: string): View {
+export function viewFromPath(pathname: string): View {
   return VIEWS.find((view) => pathname === `/${view}`) ?? DEFAULT_VIEW;
 }
 

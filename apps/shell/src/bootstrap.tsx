@@ -1,9 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { describeError } from './errors';
-import { createRemoteLoader, resolveEntries, simulatedOutages } from './remotes';
-import { loadRuntimeConfig } from './runtimeConfig';
-import { Shell } from './Shell';
+import { describeError } from './ui/errors';
+import { createRemoteLoader, resolveEntries, simulatedOutages } from './infrastructure/remotes';
+import { loadRuntimeConfig } from './infrastructure/runtimeConfig';
+import { ShellApp } from './ShellApp';
 import './global.css';
 
 const container = document.getElementById('root');
@@ -20,7 +20,7 @@ void loadRuntimeConfig().then(
     );
     root.render(
       <StrictMode>
-        <Shell config={config} loader={loader} outages={outages} />
+        <ShellApp config={config} loader={loader} outages={outages} />
       </StrictMode>,
     );
   },
