@@ -4,7 +4,61 @@ Baseline answers one question for a delivery organisation: who is working on wha
 and what it costs. It is built as three independently deployable micro-frontends — **shell**,
 **people** and **delivery** — owned by two teams that never import each other's source.
 
-> Work in progress. This README only describes what already exists; it grows with the code.
+Start with **Run it** and **Breaking a remote on purpose**, then the map of the repository and
+**Decisions**; the rest describes how each part behaves.
+
+## Run it
+
+```bash
+docker compose up --build
+```
+
+From a clean clone, with only Docker installed, open http://localhost:8080. Nothing is built on the
+host: every image installs and builds inside Docker. Three containers, one per deployable unit; only
+the shell's is published.
+
+```
+browser ─► :8080  shell (nginx: the shell bundle, the gateway, /config.json made from env)
+                   ├─ /mf/people/        ─► people    (remote bundle, standalone page)
+                   ├─ /api/people/v1/    ─► people    (API, JSON store on a volume, events)
+                   ├─ /mf/delivery/      ─► delivery  (remote bundle, standalone page)
+                   └─ /api/delivery/v1/  ─► delivery  (API, JSON store on a volume, events)
+```
+
+- **shell** is nginx: it serves the shell and forwards `/mf/people/` and `/mf/delivery/` to the
+  remotes, so the browser sees one origin and no CORS is needed. Its `/config.json` is generated
+  when the container starts, from `PEOPLE_REMOTE_ENTRY` and `DELIVERY_REMOTE_ENTRY`.
+- **people** and **delivery** are Node containers running their server: the API, the federated
+  remote at `/mf-manifest.json` and the standalone page at `/`, reachable as
+  http://localhost:8080/mf/people/ and http://localhost:8080/mf/delivery/. The server is bundled
+  with its dependencies, so the image holds no `node_modules`.
+- The gateway also forwards `/api/people/v1/` and `/api/delivery/v1/`, with buffering off so event
+  streams arrive as they are sent.
+- Each service keeps its data in a named volume: it survives a restart, and
+  `docker compose down -v` resets it to the seed.
+- Each image builds from the repository root, e.g. `docker build -f apps/people/Dockerfile .`, and
+  downloads packages in a layer that depends only on `pnpm-lock.yaml`.
+- The gateway looks its upstreams up again every few seconds instead of once at start-up, so it
+  starts and stays up while a remote is down; only that remote's paths answer 502, and a service
+  that was just started can still answer 502 for a moment.
+
+## Breaking a remote on purpose
+
+- In the shell header open **Diagnostics → Break People** (or Delivery). This adds
+  `?break=people` to the URL; the shell then points that remote at an entry that does not exist,
+  exactly like a missing deployment. The panel explains what failed, the other panel keeps working.
+  **Restore all remotes** removes the parameter.
+- With Docker, `docker compose stop people` is a real outage: the panel shows what failed after
+  about two seconds, and `docker compose start people` followed by **Retry** brings it back.
+- Or point a remote at an entry that is not a manifest, without rebuilding anything (the gateway
+  answers that path with the shell page, so the load fails on parsing):
+  `PEOPLE_REMOTE_ENTRY=/mf/nowhere/mf-manifest.json docker compose up -d shell` (and
+  `DELIVERY_REMOTE_ENTRY` likewise) rewrites `/config.json` when the shell container starts. Run
+  `docker compose up -d shell` without the variable to put it back. (Git Bash on Windows rewrites a
+  value that starts with `/`; prefix the command with `MSYS_NO_PATHCONV=1`.)
+- Or stop a remote's dev server: its panel fails at once with a connection error (a remote that
+  hangs instead is given up on after ten seconds); start the server again and press **Retry** — the
+  remote loads without reloading the page.
 
 ## How the pieces fit
 
@@ -27,6 +81,219 @@ shell (host, :3000) ── reads /config.json at start-up ──► registers re
   boundary and a Retry button. A failing remote is replaced by a message; the rest keeps working.
 - **Team boundaries are linted.** Packages reach each other only through `@baseline/*-contract`
   packages; relative imports into another package fail `pnpm lint`.
+
+## Repository
+
+| Path                      | What it is                                                              |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `apps/shell`              | Host: navigation, display currency, active user, remote loading.        |
+| `apps/people`             | Remote: the employee register (team People).                            |
+| `apps/delivery`           | Remote: work breakdown and staffing grid (team Delivery).               |
+| `contracts/host`          | Host contract v1 — what the shell pushes into every remote.             |
+| `contracts/people`        | People contract v1 — employees, rates, rate semantics and test vectors. |
+| `contracts/delivery`      | Delivery contract v1 — workload per employee-month.                     |
+| `seed/baseline-seed.json` | Fixtures shipped with the exercise. Ids and values are kept verbatim.   |
+| `tsconfig.base.json`      | Strict compiler settings every package extends.                         |
+| `eslint.config.js`        | Type-aware lint rules (`no-explicit-any`, hooks, team-boundary checks). |
+| `docker-compose.yml`      | The three containers; each app's `Dockerfile` sits in its folder.       |
+| `e2e`                     | Browser tests (Playwright) of the running Docker stack.                 |
+| `scripts/smoke.mjs`       | Checks a running stack from outside: config, manifests, APIs, streams.  |
+| `.github/workflows`       | CI: checks, then the compose stack with smoke and browser tests.        |
+| `knip.json`               | Settings for `pnpm knip`: unused files, exports and dependencies.       |
+| `CLAUDE.md`, `.claude/`   | Project rules and guardrails for AI-assisted work with Claude Code.     |
+
+People and Delivery have the same layout under `src/`; the shell is small and keeps its dozen files
+flat.
+
+```
+domain/           plain TypeScript, the rules: its own tsconfig, no DOM, no I/O, no contracts
+application/      stores, view models and ports; no React, no fetch
+infrastructure/   gateways, change feeds, runtime config, mapping of contract data
+ui/               React components and their CSS Modules
+server/           Hono API, JSON store, event bus (bundled to dist-server/main.js)
+*App.tsx          the component exposed as ./App; index.tsx and bootstrap.tsx start it standalone
+```
+
+## Decisions
+
+The choices the case study leaves open, with what each one costs. The first is the one it asks to
+be defended.
+
+### Who computes cost: Delivery, from the rates People publishes
+
+Delivery reads the rate records and prices the grid itself, with pure functions
+(`priceMonth` and `costOf` in `apps/delivery/src/domain/pricing.ts`), instead of asking People for a
+computed cost.
+
+1. **Splitting a month is a rule of the plan, not of the rates.** R1 spreads an allocation evenly
+   over the working days of its month. If People returned the cost it would have to know Delivery's
+   calendar and that spreading rule, and the coupling would run the wrong way.
+2. **Speed.** Switching the unit, or reading new rates, reprices every cell of the grid, hundreds of
+   them, and a cost typed into a cell is converted back through that month's blended rate. Doing
+   that in the browser is immediate; a request to People per cell would not be, and would make the
+   unit switch depend on People being up.
+3. **Failure.** If People goes down while Delivery is open, Delivery keeps pricing with the rates it
+   last read and says the figures may be out of date, with a Refresh button. If the page is loaded
+   while People is down there are no rates to read: hours and cost say why they are not shown, and
+   person-months and percent keep working.
+4. **Testability.** R1 to R3 are arithmetic in a few modules that run without a browser or a
+   network, and the reference calculation is a golden test (`pricing.test.ts`).
+
+**What it costs.** Delivery has to read the rates exactly as People means them: `validFrom` is
+inclusive, there is no end date, and before the first record there is no rate. Two things hold that
+together. The meaning is part of the People contract (v1) together with `rateSemanticsVectors`,
+which both teams run against their own code, and a change of meaning is a new contract version.
+And Delivery reads People's payloads in one place and refuses a history that contradicts itself.
+
+**When I would choose the opposite.** If hourly rates were confidential to Delivery, People would
+publish only totals, and the month-splitting rule would have to be agreed across the boundary
+instead of owned by one side.
+
+### The data layer: a small service per team
+
+People and Delivery each run a Hono service next to their bundle. It is the only writer of that
+team's data, imports its own part of the seed on first start, and answers over REST with schemas
+from the team's contract. The browser never reads another team's store. The consumer validates what
+it receives at the edge and maps it into its own model; TypeScript types alone do not protect two
+apps that deploy on their own schedules.
+
+### Transport: REST for state, server-sent events for "something changed"
+
+An event carries no data worth trusting, only who changed and at which revision. A consumer reads
+the event by name, ignores the rest of the payload and fetches the data again over REST, so there is
+one source of truth and no bug from events arriving out of order. Every (re)connection is followed
+by a full read, because what happened in between is unknown. This works the same in the shell, in a
+standalone remote and in another tab, because the change goes through the service and not through
+the page.
+
+Rejected: a bus in the shell (it does not exist in standalone, and the shell would start to know
+other teams' data) and `BroadcastChannel` (one browser only, and it needs a live publisher on the
+page). The price is a read per change and one open connection per stream; the connection budget is
+the **Limits** note in the People screen section.
+
+### State ownership
+
+| Data                                         | Owner    | How others get it                                           |
+| -------------------------------------------- | -------- | ----------------------------------------------------------- |
+| Employee, rate records                       | People   | REST and `rates-changed` (`@baseline/people-contract`)      |
+| Project, work breakdown item, allocation     | Delivery | not published                                               |
+| Workload per employee and month, over/within | Delivery | REST and `workload-changed` (`@baseline/delivery-contract`) |
+| Display currency, active user                | Shell    | props to each remote (`@baseline/host-contract`)            |
+
+### Persistence: one JSON document per service, on a named volume
+
+A change is written to a temporary file, flushed and renamed over the old document, one change at a
+time, and only then becomes visible and announced. The data survives a page reload and a container
+restart; `docker compose down -v` resets it to the seed. The service reaches the file through a small
+`JsonFileStore`, so a database could replace it without touching the domain.
+
+Rejected: browser storage. A standalone Delivery would have no rates whenever People is not open,
+and transport between the remotes would shrink to `BroadcastChannel`. The price of a file is one
+writer per service, so no second instance of either, and the whole document is rewritten on every
+change, which is cheap at 720 allocations.
+
+### The bundler: Rsbuild 2 with Module Federation 2
+
+It is the path the Module Federation team ships: the runtime API (`registerRemotes`, `loadRemote`),
+`mf-manifest.json`, and fast builds inside Docker. Webpack 5 shares the core but is slower, and
+Vite-based federation is weaker for singletons. Only `react` and `react-dom` are shared, as
+singletons with `strictVersion`, so a remote built for another major fails to load instead of
+starting a second React. Contracts and zod are bundled into every app: they hold no state and are
+small. `dts` is off, because types come from the contracts and not from another app's build.
+
+### Smaller decisions
+
+- **One stored unit: person-months,** as a double, never quantised. Hours, % and cost are conversions
+  at the edges, so switching units writes nothing, and a rate change moves cost but not effort.
+- **Rounding is a flow problem.** Totals along rows, down the tree and overall must all equal the sum
+  of what is shown. Largest remainder solves one row; for a tree by months the constraints nest, so
+  a minimum-cost flow over 0/1 edges finds shown figures that are each the exact value rounded up
+  or down. Totals and group figures get priority over cells (equal weights were refuted by an example:
+  3.006 shown as 3.00). Exact values are held as integers in ten-thousandths of a display step, so
+  1.005 is recognised as a half.
+- **R4: the leaf's allocations move onto the new child,** and the user is told how many. Moving an
+  item under a leaf that holds allocations is refused, since the leaf's allocations would have no
+  place to go. Silent loss never happens.
+- **The grid opens on the project's own months,** not on the seed's `gridHorizon` (Apr 26 – Mar 27):
+  the reference cell is in March 2026, which that horizon leaves out. A preset restores it.
+- **Edit order stands in for time.** The seed has no timestamps, so the order of the file decides
+  which allocation is "most recently edited"; every change made afterwards takes a revision above
+  all others.
+- **Over capacity is flagged, never blocked.** A month is over capacity above 1 person-month plus
+  1e-9, a tolerance against floating-point noise and not a rounding budget.
+- **No UI library.** The tree, the grid (an ARIA treegrid with one tab stop) and the dialogs
+  (native `<dialog>`) are written here; styles are CSS Modules.
+
+## Where each rule lives
+
+The case study numbers its rules R1 to R5. Paths are under `apps/delivery/src` unless noted.
+
+| Rule                                            | Code                                                                                                                                                                                                                                                                | Tests                                                                                                                                                                                           |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 Effective-dated rates, months split          | `domain/calendar.ts` (working days), `domain/rateTimeline.ts` (rate on a date), `domain/pricing.ts` (slices, cost, blended rate); People's own record rules in `apps/people/src/domain/rates.ts`                                                                    | `pricing.test.ts` (reference calculation), `calendar.test.ts`, `rateTimeline.test.ts`; the contract's vectors run in `infrastructure/peopleContract.test.ts` and in People's `contract.test.ts` |
+| R2 Four units, one stored value                 | `domain/units.ts` (conversions), `application/figures.ts` (display precision), `application/cellEntry.ts` (typed text to person-months)                                                                                                                             | `units.test.ts`, `figures.test.ts`, `cellEntry.test.ts`                                                                                                                                         |
+| R3 Totals add up                                | `domain/rounding/roundForDisplay.ts` and `cheapestCirculation.ts`, applied to the whole grid in `application/gridView.ts`                                                                                                                                           | `roundForDisplay.test.ts` and `cheapestCirculation.test.ts` (properties), `gridView.test.ts`                                                                                                    |
+| R4 Parents are derived; a leaf's allocations    | `domain/breakdown.ts` (add, move, delete), derived rows in `application/gridView.ts`, wording in `application/messages.ts`                                                                                                                                          | `breakdown.test.ts`, `deliveryStore.test.ts`                                                                                                                                                    |
+| R5 Capacity across projects, the cause is named | `domain/capacity.ts` (workload and cause), published at `GET /api/delivery/v1/workload`; People's badge in `apps/people/src/application/peopleStore.ts`; the list of over-capacity months in `application/overload.ts`, the cell marks in `application/gridView.ts` | `capacity.test.ts`, `overload.test.ts`, `server/deliveryApi.test.ts`; People's `peopleStore.test.ts`                                                                                            |
+
+The reference calculation (Adaeze Okafor, March 2026: 88.00 h, €7,880.00, 50.0 %, €89.5455/h) is
+checked three times: as a domain test, through the figures of the calculation panel, and in a
+browser (`e2e`).
+
+## Development
+
+Requires Node 24 and pnpm (version pinned in `package.json` → `packageManager`).
+
+```bash
+pnpm install
+pnpm dev        # shell http://localhost:3000 · people :3001 · delivery :3002
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm knip       # unused files, exports and dependencies
+pnpm build
+```
+
+`pnpm test` runs the unit and property tests only; the running system is checked separately, see
+[Checks and CI](#checks-and-ci).
+
+Each remote also runs on its own: open http://localhost:3001 or http://localhost:3002.
+
+The servers run separately from the front ends. `pnpm --filter @baseline/people dev:server` and
+`pnpm --filter @baseline/delivery dev:server` start them on :3011 and :3012, importing the seed into
+`data/` the first time; delete that folder to start over. `pnpm build` also bundles each server
+into `dist-server/main.js`.
+
+## Checks and CI
+
+Against a running stack (`docker compose up --build --detach --wait`), both reach it through the
+gateway on http://localhost:8080 only:
+
+```bash
+pnpm smoke      # node scripts/smoke.mjs [base-url] [--down=people,delivery]
+pnpm e2e        # Playwright, in e2e/
+```
+
+- **Smoke** checks that the shell and `/config.json` are served with same-origin remote entries,
+  that each manifest names its remote and its entry script loads, that People serves every employee
+  of the seed and Delivery every project, and that both event streams deliver their first bytes at
+  once, which fails if something in front of them buffers. `--down=people` is for a stack where
+  that service was stopped on purpose: its paths must answer with a gateway error while everything
+  else stays healthy.
+- **Browser tests** read the reference cell (Adaeze Okafor, March 2026) in all four units and in
+  USD, open its calculation, check that `?break=people` and `?break=delivery` take down one panel
+  and leave the other working, check that a wide staffing grid does not squeeze People when the two sit side by side, and correct her rate in People to see Delivery reprice without a
+  reload, on the same page and in another tab. The browser runs in the Auckland time zone, because
+  dates are UTC-only. The tests expect the seed data: a test puts Adaeze Okafor's second rate
+  (`rate-002`) back afterwards, also when it failed halfway, but any other edit made by hand stays;
+  `docker compose down -v` resets the stack. The first run needs a browser:
+  `pnpm --filter @baseline/e2e exec playwright install chromium`, or set
+  `E2E_BROWSER_CHANNEL=msedge` (or `chrome`) to use one that is installed. `E2E_BASE_URL` points
+  the tests at another address.
+- **CI** (`.github/workflows/ci.yml`) runs on every push to main and every pull request. The first
+  job installs with the lockfile frozen and runs format check, typecheck, lint, knip, tests and
+  build. The second builds the three images, starts them, runs smoke, the browser tests, and smoke again
+  with People and then Delivery stopped.
 
 ## Contracts
 
@@ -108,48 +375,6 @@ People's rules (`apps/people/src/domain`):
 - **Search** matches every word of the query against name and role together, ignoring case and
   accents (and folding letters like ł and ø); a blank query matches everyone. Results keep register
   order.
-
-## Repository
-
-| Path                      | What it is                                                              |
-| ------------------------- | ----------------------------------------------------------------------- |
-| `apps/shell`              | Host: navigation, display currency, active user, remote loading.        |
-| `apps/people`             | Remote: the employee register (team People).                            |
-| `apps/delivery`           | Remote: work breakdown and staffing grid (team Delivery).               |
-| `contracts/host`          | Host contract v1 — what the shell pushes into every remote.             |
-| `contracts/people`        | People contract v1 — employees, rates, rate semantics and test vectors. |
-| `contracts/delivery`      | Delivery contract v1 — workload per employee-month.                     |
-| `seed/baseline-seed.json` | Fixtures shipped with the exercise. Ids and values are kept verbatim.   |
-| `tsconfig.base.json`      | Strict compiler settings every package extends.                         |
-| `eslint.config.js`        | Type-aware lint rules (`no-explicit-any`, hooks, team-boundary checks). |
-| `docker-compose.yml`      | The three containers; each app's `Dockerfile` sits in its folder.       |
-| `e2e`                     | Browser tests (Playwright) of the running Docker stack.                 |
-| `scripts/smoke.mjs`       | Checks a running stack from outside: config, manifests, APIs, streams.  |
-| `.github/workflows`       | CI: checks, then the compose stack with smoke and browser tests.        |
-| `CLAUDE.md`, `.claude/`   | Project rules and guardrails for AI-assisted work with Claude Code.     |
-
-## Development
-
-Requires Node 24 and pnpm (version pinned in `package.json` → `packageManager`).
-
-```bash
-pnpm install
-pnpm dev        # shell http://localhost:3000 · people :3001 · delivery :3002
-pnpm test
-pnpm typecheck
-pnpm lint
-pnpm build
-```
-
-`pnpm test` runs the unit and property tests only; the running system is checked separately, see
-[Checks and CI](#checks-and-ci).
-
-Each remote also runs on its own: open http://localhost:3001 or http://localhost:3002.
-
-The servers run separately from the front ends. `pnpm --filter @baseline/people dev:server` and
-`pnpm --filter @baseline/delivery dev:server` start them on :3011 and :3012, importing the seed into
-`data/` the first time; delete that folder to start over. `pnpm build` also bundles each server
-into `dist-server/main.js`.
 
 ## Services
 
@@ -323,68 +548,19 @@ item's name opens or closes it.
 - **State.** The unit, the months and the open rows stay while the Breakdown view is shown, and
   reset when another project is chosen.
 
-## Running with Docker
+## What I would do next
 
-```bash
-docker compose up --build
-```
-
-Open http://localhost:8080. Three containers, one per deployable unit; only the shell's is published.
-
-- **shell** is nginx: it serves the shell and forwards `/mf/people/` and `/mf/delivery/` to the
-  remotes, so the browser sees one origin and no CORS is needed. Its `/config.json` is generated
-  when the container starts, from `PEOPLE_REMOTE_ENTRY` and `DELIVERY_REMOTE_ENTRY`.
-- **people** and **delivery** are Node containers running their server: the API, the federated
-  remote at `/mf-manifest.json` and the standalone page at `/`, reachable as
-  http://localhost:8080/mf/people/ and http://localhost:8080/mf/delivery/. The server is bundled
-  with its dependencies, so the image holds no `node_modules`.
-- The gateway also forwards `/api/people/v1/` and `/api/delivery/v1/`, with buffering off so event
-  streams arrive as they are sent.
-- Each service keeps its data in a named volume: it survives a restart, and
-  `docker compose down -v` resets it to the seed.
-- Each image builds from the repository root, e.g. `docker build -f apps/people/Dockerfile .`, and
-  downloads packages in a layer that depends only on `pnpm-lock.yaml`.
-- The gateway looks its upstreams up on every request, so it starts and stays up while a remote is
-  down; only that remote's paths answer 502.
-
-## Breaking a remote on purpose
-
-- In the shell header open **Diagnostics → Break People** (or Delivery). This adds
-  `?break=people` to the URL; the shell then points that remote at an entry that does not exist,
-  exactly like a missing deployment. The panel explains what failed, the other panel keeps working.
-  **Restore all remotes** removes the parameter.
-- With Docker, `docker compose stop people` is a real outage: the panel shows what failed after
-  about two seconds, and `docker compose start people` followed by **Retry** brings it back.
-- Or stop a remote's dev server: its panel times out with a message; start the server again and
-  press **Retry** — the remote loads without reloading the page.
-
-## Checks and CI
-
-Against a running stack (`docker compose up --build --detach --wait`), both reach it through the
-gateway on http://localhost:8080 only:
-
-```bash
-pnpm smoke      # node scripts/smoke.mjs [base-url] [--down=people,delivery]
-pnpm e2e        # Playwright, in e2e/
-```
-
-- **Smoke** checks that the shell and `/config.json` are served with same-origin remote entries,
-  that each manifest names its remote and its entry script loads, that People serves every employee
-  of the seed and Delivery every project, and that both event streams deliver their first bytes at
-  once, which fails if something in front of them buffers. `--down=people` is for a stack where
-  that service was stopped on purpose: its paths must answer with a gateway error while everything
-  else stays healthy.
-- **Browser tests** read the reference cell (Adaeze Okafor, March 2026) in all four units and in
-  USD, open its calculation, check that `?break=people` and `?break=delivery` take down one panel
-  and leave the other working, check that a wide staffing grid does not squeeze People when the two sit side by side, and correct her rate in People to see Delivery reprice without a
-  reload, on the same page and in another tab. The browser runs in the Auckland time zone, because
-  dates are UTC-only. The tests expect the seed data: a test puts Adaeze Okafor's second rate
-  (`rate-002`) back afterwards, also when it failed halfway, but any other edit made by hand stays;
-  `docker compose down -v` resets the stack. The first run needs a browser:
-  `pnpm --filter @baseline/e2e exec playwright install chromium`, or set
-  `E2E_BROWSER_CHANNEL=msedge` (or `chrome`) to use one that is installed. `E2E_BASE_URL` points
-  the tests at another address.
-- **CI** (`.github/workflows/ci.yml`) runs on every push to main and every pull request. The first
-  job installs with the lockfile frozen and runs format check, typecheck, lint, tests and build.
-  The second builds the three images, starts them, runs smoke, the browser tests, and smoke again
-  with People and then Delivery stopped.
+- **Record who edited an allocation, and when.** Edit order now stands in for time because the seed
+  has neither; with real authors and timestamps the cause of an over-capacity month could be shown
+  as "edited by … on …".
+- **Fewer connections per page.** One multiplexed stream per page, or HTTP/2 at the gateway, would
+  lift the six-connection budget that a handful of tabs can fill.
+- **A database behind `JsonFileStore`** if a service ever needs a second instance; today each has
+  exactly one writer.
+- **Check employee ids against People, and price the rest.** Delivery's API stores whichever id it
+  is given. The screen only offers people from the register, but an unknown id sent to the API makes
+  hours and cost unavailable for the whole project, with a message naming the id, instead of for
+  that person alone.
+- **Holidays.** Working days are Monday to Friday by specification; the calendar is the one place to
+  add a set of holiday dates.
+- **Cache image layers in CI,** so the compose job does not build three images from scratch.

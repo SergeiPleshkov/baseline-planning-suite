@@ -10,7 +10,7 @@ Run from the repository root:
 
 - `pnpm test` — Vitest; domain tests run in Node, no browser
 - `pnpm typecheck` — also compiles each `src/domain` with `tsconfig.domain.json` (no DOM, no Node)
-- `pnpm lint`, `pnpm format:check`
+- `pnpm lint`, `pnpm knip` (unused files, exports, dependencies), `pnpm format:check`
 - `pnpm build`
 - `pnpm dev` — shell :3000, people :3001, delivery :3002
 - `pnpm --filter @baseline/people dev:server`, `…/delivery dev:server` — the APIs on :3011, :3012
