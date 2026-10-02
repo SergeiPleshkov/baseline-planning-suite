@@ -106,7 +106,7 @@ describe('deleteItem', () => {
     expect(summary).toEqual({
       root: 'migration',
       items: ['migration', 'discovery', 'design', 'review'],
-      allocations: ['alloc-050'],
+      allocations: [{ id: 'alloc-050', personMonths: 0.59 }],
       personMonths: 0.59,
     });
     const plan = value(deleteItem(before, summary));
@@ -129,6 +129,37 @@ describe('deleteItem', () => {
       ok: false,
       error: 'changed-since-confirmation',
     });
+  });
+
+  it('deletes nothing when an amount changed after the user confirmed it', () => {
+    const shown = testPlan();
+    const summary = value(deletionSummary(shown, id('cutover')));
+    const meanwhile = value(
+      setAllocation(
+        shown,
+        {
+          breakdownItemId: id('cutover'),
+          employeeId: employeeId('emp-001'),
+          month: yearMonth('2026-04'),
+        },
+        1,
+        allocationId('unused'),
+      ),
+    );
+    expect(deleteItem(meanwhile, summary)).toEqual({
+      ok: false,
+      error: 'changed-since-confirmation',
+    });
+  });
+
+  it('deletes nothing when the confirmation names other amounts than the plan holds', () => {
+    const plan = testPlan();
+    const summary = value(deletionSummary(plan, id('cutover')));
+    const forged = {
+      ...summary,
+      allocations: summary.allocations.map((each) => ({ ...each, personMonths: 0.1 })),
+    };
+    expect(deleteItem(plan, forged)).toEqual({ ok: false, error: 'changed-since-confirmation' });
   });
 
   it('turns a parent whose last child goes back into a leaf that can hold allocations', () => {

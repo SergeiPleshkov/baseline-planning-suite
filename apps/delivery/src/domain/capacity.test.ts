@@ -11,6 +11,21 @@ const loadOf = (plan: Plan, employee: string, month: string) =>
 
 const planWith = (allocations: Allocation[]) => createPlan({ projects, items, allocations });
 
+describe('workload sums', () => {
+  it('give the same figure whatever order the allocations are stored in', () => {
+    const parts = [
+      allocation('a', 'design', 'e', '2026-06', 0.1, 1),
+      allocation('b', 'review', 'e', '2026-06', 0.2, 2),
+      allocation('c', 'build', 'e', '2026-06', 0.3, 3),
+    ];
+    // In doubles 0.1 + 0.2 + 0.3 is 0.6000000000000001, but 0.3 + 0.2 + 0.1 is 0.6.
+    const loads = [parts, [...parts].reverse(), [parts[1], parts[2], parts[0]]].map(
+      (order) => loadOf(planWith(order as Allocation[]), 'e', '2026-06')?.personMonths,
+    );
+    expect(new Set(loads).size).toBe(1);
+  });
+});
+
 describe('workload', () => {
   it('sums a person-month across projects and names the latest edit as the cause', () => {
     // M. Brandt, June 2026: 0.59 on Ledger (alloc-050) and 0.59 on Portal (alloc-073).

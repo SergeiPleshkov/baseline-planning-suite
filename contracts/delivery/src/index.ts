@@ -43,7 +43,8 @@ export const WorkloadResponseSchema = z.object({
 /**
  * Sent on the SSE stream (`event: workload-changed`, `data:` the JSON below) after an allocation
  * change. It only says who changed: the consumer re-reads `/workload`, and does so unconditionally
- * after a reconnect.
+ * after a reconnect. It is sent only when a published figure changed, and `revision` is the one
+ * `/workload` has once the change is in.
  */
 export const WorkloadChangedEventSchema = z.object({
   type: z.literal('workload-changed'),

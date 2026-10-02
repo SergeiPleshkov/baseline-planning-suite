@@ -1,6 +1,13 @@
 import type { YearMonth } from './calendar';
 import type { AllocationId, BreakdownItemId, EmployeeId } from './ids';
-import { cellKey, childrenOf, revise, type Allocation, type Plan } from './plan';
+import {
+  cellKey,
+  childrenOf,
+  isValidAllocationAmount,
+  revise,
+  type Allocation,
+  type Plan,
+} from './plan';
 import { err, ok, type Result } from './result';
 
 export interface AllocationCell {
@@ -23,7 +30,7 @@ export function setAllocation(
   personMonths: number,
   idIfNew: AllocationId,
 ): Result<Plan, SetAllocationError> {
-  if (!Number.isFinite(personMonths) || personMonths < 0) return err('invalid-amount');
+  if (!isValidAllocationAmount(personMonths)) return err('invalid-amount');
   const item = plan.items.get(cell.breakdownItemId);
   if (!item) return err('unknown-item');
   if (childrenOf(plan, item.id).length > 0) return err('not-a-leaf');

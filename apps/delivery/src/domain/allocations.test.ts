@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { setAllocation, type AllocationCell } from './allocations';
 import { yearMonth } from './calendar';
 import { allocationId, breakdownItemId, employeeId } from './ids';
-import type { Plan } from './plan';
+import { MAX_ALLOCATION_PERSON_MONTHS, type Plan } from './plan';
 import { testPlan } from './plan.fixtures';
 import type { Result } from './result';
 
@@ -17,6 +17,26 @@ function planOf(result: Result<Plan, string>): Plan {
   if (!result.ok) throw new Error(result.error);
   return result.value;
 }
+
+describe('the largest allocation', () => {
+  const cell = {
+    breakdownItemId: breakdownItemId('docs'),
+    employeeId: employeeId('e'),
+    month: yearMonth('2026-07'),
+  };
+
+  it('is accepted at the limit and refused above it or when it is not a number', () => {
+    expect(
+      setAllocation(testPlan(), cell, MAX_ALLOCATION_PERSON_MONTHS, allocationId('x')).ok,
+    ).toBe(true);
+    for (const amount of [MAX_ALLOCATION_PERSON_MONTHS + 0.01, 1e308, Number.POSITIVE_INFINITY]) {
+      expect(setAllocation(testPlan(), cell, amount, allocationId('x'))).toEqual({
+        ok: false,
+        error: 'invalid-amount',
+      });
+    }
+  });
+});
 
 describe('setAllocation', () => {
   it('creates an allocation under the given id with the next revision', () => {

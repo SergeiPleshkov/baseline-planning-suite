@@ -125,7 +125,7 @@ export function moveItem(
 export interface DeletionSummary {
   readonly root: BreakdownItemId;
   readonly items: readonly BreakdownItemId[];
-  readonly allocations: readonly AllocationId[];
+  readonly allocations: readonly { readonly id: AllocationId; readonly personMonths: number }[];
   readonly personMonths: number;
 }
 
@@ -140,13 +140,25 @@ export function deletionSummary(
   return ok({
     root: id,
     items,
-    allocations: allocations.map((allocation) => allocation.id),
+    allocations: allocations.map(({ id, personMonths }) => ({ id, personMonths })),
     personMonths: allocations.reduce((sum, allocation) => sum + allocation.personMonths, 0),
   });
 }
 
-const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
-  a.length === b.length && [...a].sort().join('\n') === [...b].sort().join('\n');
+const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+type Entry = string | { readonly id: string; readonly personMonths: number };
+
+/** Same ids, and for allocations the same amounts: an edited amount is not what was confirmed. */
+const sameEntries = (a: readonly Entry[], b: readonly Entry[]): boolean => {
+  const canonical = (entries: readonly Entry[]) =>
+    JSON.stringify(
+      entries
+        .map((entry) => (typeof entry === 'string' ? [entry] : [entry.id, entry.personMonths]))
+        .sort((x, y) => compare(String(x[0]), String(y[0]))),
+    );
+  return canonical(a) === canonical(b);
+};
 
 /**
  * Deletes what the user confirmed. If the subtree or its allocations changed since the summary
@@ -154,13 +166,13 @@ const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
  */
 export function deleteItem(
   plan: Plan,
-  confirmed: DeletionSummary,
+  confirmed: Pick<DeletionSummary, 'root' | 'items' | 'allocations'>,
 ): Result<Plan, 'unknown-item' | 'changed-since-confirmation'> {
   const current = deletionSummary(plan, confirmed.root);
   if (!current.ok) return current;
   if (
-    !sameIds(current.value.items, confirmed.items) ||
-    !sameIds(current.value.allocations, confirmed.allocations)
+    !sameEntries(current.value.items, confirmed.items) ||
+    !sameEntries(current.value.allocations, confirmed.allocations)
   ) {
     return err('changed-since-confirmation');
   }

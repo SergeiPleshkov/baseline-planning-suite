@@ -23,7 +23,11 @@ export function workload(
 ): ReadonlyMap<EmployeeId, ReadonlyMap<YearMonth, PersonMonthLoad>> {
   type MonthSum = { readonly total: number; readonly latest: Allocation };
   const sums = new Map<EmployeeId, Map<YearMonth, MonthSum>>();
-  for (const allocation of plan.allocations.values()) {
+  // Summed in id order, so the same allocations give the same float whatever the edit history.
+  const ordered = [...plan.allocations.values()].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+  );
+  for (const allocation of ordered) {
     const months = sums.get(allocation.employeeId) ?? new Map<YearMonth, MonthSum>();
     sums.set(allocation.employeeId, months);
     const sum = months.get(allocation.month);

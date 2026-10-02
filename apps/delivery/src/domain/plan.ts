@@ -3,6 +3,9 @@ import type { AllocationId, BreakdownItemId, EmployeeId, ProjectId } from './ids
 
 export const MAX_DEPTH = 3;
 
+/** Far beyond any real plan; it keeps sums finite and published figures meaningful. */
+export const MAX_ALLOCATION_PERSON_MONTHS = 100;
+
 export interface Project {
   readonly id: ProjectId;
   readonly name: string;
@@ -41,6 +44,11 @@ interface PlanContents {
   readonly allocations: ReadonlyMap<AllocationId, Allocation>;
   readonly lastRevision: number;
 }
+
+export const isValidAllocationAmount = (personMonths: number): boolean =>
+  Number.isFinite(personMonths) &&
+  personMonths >= 0 &&
+  personMonths <= MAX_ALLOCATION_PERSON_MONTHS;
 
 export const childrenOf = (plan: Plan, id: BreakdownItemId): BreakdownItem[] =>
   [...plan.items.values()].filter((item) => item.parentId === id);
@@ -129,7 +137,7 @@ export function createPlan(input: {
     if (!project || allocation.month < project.firstMonth || allocation.month > project.lastMonth) {
       throw new RangeError(`${allocation.id}: outside its project's months`);
     }
-    if (!Number.isFinite(allocation.personMonths) || allocation.personMonths <= 0) {
+    if (!isValidAllocationAmount(allocation.personMonths) || allocation.personMonths === 0) {
       throw new RangeError(`${allocation.id}: amount must be positive`);
     }
     if (

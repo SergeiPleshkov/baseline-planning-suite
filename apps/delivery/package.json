@@ -4,25 +4,32 @@
   "type": "module",
   "scripts": {
     "dev": "rsbuild dev",
-    "build": "rsbuild build",
+    "dev:server": "tsx watch src/server/main.ts",
+    "build": "rsbuild build && esbuild src/server/main.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist-server/main.js",
     "preview": "rsbuild preview",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.domain.json"
+    "typecheck": "tsc -p tsconfig.json && tsc -p src/server/tsconfig.json && tsc -p tsconfig.domain.json"
   },
   "dependencies": {
     "@baseline/delivery-contract": "workspace:*",
     "@baseline/host-contract": "workspace:*",
     "@baseline/people-contract": "workspace:*",
+    "@hono/node-server": "^2.1.3",
+    "hono": "^4.13.12",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@module-federation/rsbuild-plugin": "^2.9.2",
     "@rsbuild/core": "^2.2.11",
     "@rsbuild/plugin-react": "^2.1.1",
+    "@types/node": "^24.19.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "esbuild": "^0.28.2",
     "fast-check": "^4.10.2",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^5.0.3"
   }
