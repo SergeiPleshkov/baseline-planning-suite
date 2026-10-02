@@ -21,10 +21,14 @@ interface Props {
   readonly label: string;
   readonly grid: Grid;
   readonly unit: DisplayUnit;
+  /** The display currency's code: money typed with it is the figure shown, not a change. */
+  readonly currency: string;
   readonly collapsed: ReadonlySet<BreakdownItemId>;
   readonly onToggle: (id: BreakdownItemId) => void;
   /** Takes a figure typed into a cell: the reason it is refused, or `null` once it is on its way. */
   readonly onEdit: (line: PersonLine, cell: GridCell, text: string) => string | null;
+  /** Says why the text of a cell that was left was not saved: there is no input left to show it in. */
+  readonly onRefused: (line: PersonLine, cell: GridCell, reason: string) => void;
   /** A person's row to bring the focus to, by line key, at a month if it is shown; `onRevealed` says it was done. */
   readonly reveal: { readonly key: string; readonly month: YearMonth | null } | null;
   readonly onRevealed: () => void;
@@ -75,7 +79,7 @@ const focusOnMount = (element: HTMLInputElement | null) => {
  * what is below it, are marked DERIVED and cannot be edited. The last row holds the totals of the
  * whole project.
  *
- * A person's cell inside the project is edited in place: Enter or F2 opens it on its text, a digit
+ * A person's cell inside the project is edited in place: Enter or F2 opens it on its text, typing
  * starts a new figure, Delete clears it. Enter commits and moves down, Tab commits and moves
  * along, Escape drops the text.
  */
@@ -83,9 +87,11 @@ export function StaffingGrid({
   label,
   grid,
   unit,
+  currency,
   collapsed,
   onToggle,
   onEdit,
+  onRefused,
   reveal,
   onRevealed,
   onInspect,
@@ -142,7 +148,7 @@ export function StaffingGrid({
   /** The reason a figure is refused, or `null`; a figure the cell already showed is not sent. */
   function commit({ key, column }: Pick<Editing, 'key' | 'column'>, text: string): string | null {
     const target = personCellOf(key, column);
-    if (!target || !isChange(text, shownText(target.cell))) return null;
+    if (!target || !isChange(text, shownText(target.cell), { unit, currency })) return null;
     return onEdit(target.line, target.cell, text);
   }
 
@@ -194,10 +200,12 @@ export function StaffingGrid({
 
   function onInputBlur() {
     const current = editingNow.current;
-    if (!current) return;
-    // Leaving a cell with text in it that is refused drops the text: Enter is what shows why.
-    commit(current, current.text);
+    // Another window took the focus: the text stays, to be finished when the person comes back.
+    if (!current || !document.hasFocus()) return;
+    const target = personCellOf(current.key, current.column);
+    const refusal = commit(current, current.text);
     setEditing(null);
+    if (refusal !== null && target) onRefused(target.line, target.cell, refusal);
   }
 
   function onKeyDown(event: KeyboardEvent) {

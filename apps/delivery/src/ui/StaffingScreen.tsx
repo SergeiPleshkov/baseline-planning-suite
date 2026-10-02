@@ -24,7 +24,7 @@ import type { BreakdownItemId, EmployeeId } from '../domain/ids';
 import type { Plan, Project } from '../domain/plan';
 import { DISPLAY_UNITS, isPlainUnit, type DisplayUnit } from '../domain/units';
 import { AssignDialog } from './AssignDialog';
-import { formatMonthShort } from './format';
+import { formatMonth, formatMonthShort } from './format';
 import { CalculationPanel } from './CalculationPanel';
 import { OverloadList } from './OverloadList';
 import { StaffingGrid, type InspectedCell } from './StaffingGrid';
@@ -71,6 +71,8 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
   const [reveal, setReveal] = useState<{ key: string; month: YearMonth | null } | null>(null);
   const [inspected, setInspected] = useState<InspectedCell | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
+  // Text left in a cell that could not be saved, named by its cell; it goes with the next saved figure.
+  const [dropped, setDropped] = useState<string | null>(null);
 
   const ownSpan = useMemo(() => projectHorizon(project), [project]);
   const horizon = chosen ?? ownSpan;
@@ -105,7 +107,7 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
   const edit = (line: PersonLine, cell: GridCell, text: string): string | null => {
     const entered = personMonthsFromEntry(
       text,
-      unit,
+      { unit, currency: currency.code },
       conversionFor(line.employeeId, cell.month, {
         staff: known?.staff ?? null,
         rates: known?.rates ?? null,
@@ -116,6 +118,7 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
     // A row stays after its last figure is cleared, so that the person can enter another.
     assign(line.item.id, line.employeeId);
     setRefusal(null);
+    setDropped(null);
     void store
       .setAllocation(
         { breakdownItemId: line.item.id, employeeId: line.employeeId, month: cell.month },
@@ -164,6 +167,10 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
       return next;
     });
     setReveal({ key: personKey(target.item, target.employee), month: target.month });
+  };
+
+  const refused = (line: PersonLine, cell: GridCell, reason: string) => {
+    setDropped(`A figure for ${line.name}, ${formatMonth(cell.month)} was not saved: ${reason}`);
   };
 
   const inspect = useCallback((cell: InspectedCell | null) => {
@@ -337,7 +344,19 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
           A figure was not saved: {refusal}
         </p>
       )}
+      {dropped === null ? null : (
+        <p role="alert" className={styles.unavailable}>
+          {dropped}
+        </p>
+      )}
 
+      <OverloadList
+        entries={overloaded}
+        canShow={gridShown}
+        project={project.id}
+        nameOf={nameOf}
+        onShow={showOverload}
+      />
       {waitingForPeople ? (
         <p role="status" className={styles.message}>
           Loading people…
@@ -355,28 +374,24 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
           label={`Staffing of ${project.name}, ${unitLabel(unit, currency)}`}
           grid={built.grid}
           unit={unit}
+          currency={currency.code}
           collapsed={collapsed}
           onToggle={toggle}
           onEdit={edit}
+          onRefused={refused}
           reveal={reveal}
           onRevealed={revealed}
           onInspect={inspect}
         />
       )}
-      <OverloadList
-        entries={overloaded}
-        canShow={gridShown}
-        project={project.id}
-        nameOf={nameOf}
-        onShow={showOverload}
-      />
       <CalculationPanel calculation={calculation} currency={currency} />
       <p className={styles.legend}>
         † marks the allocation edited last in a month over capacity, and the other contributions to
         that month are tinted; ◇ marks a cost with days that have no rate. Enter or F2 edits a
-        person’s cell, a digit starts a new figure, Delete clears it; Enter saves and moves down,
-        Tab moves along, Escape drops the text. Figures are rounded together, so every total is the
-        sum of the figures it covers. Shaded months are outside the project.
+        person’s cell, typing starts a new figure (a unit may stand before or after it: 88 h, 50 %,
+        €7,880), Delete clears it; Enter saves and moves down, Tab moves along, Escape drops the
+        text. Figures are rounded together, so every total is the sum of the figures it covers.
+        Shaded months are outside the project.
       </p>
 
       {assigning && known !== null ? (

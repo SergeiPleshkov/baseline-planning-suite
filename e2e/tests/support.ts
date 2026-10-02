@@ -45,12 +45,68 @@ export async function correctOkaforRate(page: Page, eur: number): Promise<void> 
   ).toBeVisible();
 }
 
-/** Puts the stack's data back, whatever state a failed run left it in: repeating the call changes nothing. */
-export async function restoreOkaforRate(request: APIRequestContext): Promise<void> {
-  const response = await request.patch(`/api/people/v1/rates/${OKAFOR_SECOND_RATE.id}`, {
-    data: { hourlyRateEur: OKAFOR_SECOND_RATE.eur },
+/** Types into a cell through its editor, which is how a character with no key of its own (€) arrives. */
+export async function typeInto(page: Page, cell: Locator, text: string): Promise<void> {
+  await cell.click();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type(text);
+  await page.keyboard.press('Enter');
+}
+
+const REFERENCE_CELL = { breakdownItemId: 'wbs-012', employeeId: 'emp-001', month: '2026-03' };
+
+export async function setReferenceCell(
+  request: APIRequestContext,
+  personMonths: number,
+): Promise<void> {
+  const response = await request.put('/api/delivery/v1/allocations', {
+    data: { ...REFERENCE_CELL, personMonths },
   });
   expect(response.ok()).toBe(true);
+}
+
+/**
+ * Puts the stack's data back, whatever state a failed run left it in: Adaeze Okafor's two rates and
+ * her half person-month in March 2026. What is already right is not written again.
+ */
+export async function restoreReference(request: APIRequestContext): Promise<void> {
+  const { rates } = (await (await request.get('/api/people/v1/rates')).json()) as {
+    rates: { id: string; employeeId: string; validFrom: string; hourlyRateEur: number }[];
+  };
+  const first = rates.find((r) => r.employeeId === 'emp-001' && r.validFrom === '2025-01-01');
+  if (first === undefined) {
+    const added = await request.post('/api/people/v1/employees/emp-001/rates', {
+      data: { validFrom: '2025-01-01', hourlyRateEur: 80 },
+    });
+    expect(added.ok()).toBe(true);
+  } else if (first.hourlyRateEur !== 80) {
+    expect(
+      (
+        await request.patch(`/api/people/v1/rates/${first.id}`, { data: { hourlyRateEur: 80 } })
+      ).ok(),
+    ).toBe(true);
+  }
+  const second = await request.patch(`/api/people/v1/rates/${OKAFOR_SECOND_RATE.id}`, {
+    data: { hourlyRateEur: OKAFOR_SECOND_RATE.eur },
+  });
+  expect(second.ok()).toBe(true);
+
+  const { allocations } = (await (await request.get('/api/delivery/v1/plan')).json()) as {
+    allocations: {
+      breakdownItemId: string;
+      employeeId: string;
+      month: string;
+      personMonths: number;
+    }[];
+  };
+  const cell = allocations.find(
+    (a) =>
+      a.breakdownItemId === REFERENCE_CELL.breakdownItemId &&
+      a.employeeId === REFERENCE_CELL.employeeId &&
+      a.month === REFERENCE_CELL.month,
+  );
+  if (cell?.personMonths !== 0.5) await setReferenceCell(request, 0.5);
 }
 
 const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

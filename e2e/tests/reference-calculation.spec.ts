@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { openStaffing, referenceCell, showUnit } from './support';
+import { openStaffing, referenceCell, restoreReference, showUnit } from './support';
 
 test.describe('the reference calculation: Adaeze Okafor, March 2026', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    await restoreReference(request);
     await openStaffing(page, '/delivery');
   });
 

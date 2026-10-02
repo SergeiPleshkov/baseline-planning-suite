@@ -3,7 +3,7 @@ import {
   correctOkaforRate,
   openStaffing,
   referenceCell,
-  restoreOkaforRate,
+  restoreReference,
   showUnit,
 } from './support';
 
@@ -13,11 +13,11 @@ const BEFORE = '7,880.00';
 const AFTER = '8,160.00';
 
 test.beforeEach(async ({ request }) => {
-  await restoreOkaforRate(request);
+  await restoreReference(request);
 });
 
 test.afterEach(async ({ request }) => {
-  await restoreOkaforRate(request);
+  await restoreReference(request);
 });
 
 test('a rate corrected in People reprices Delivery on the same page, without a reload', async ({

@@ -10,37 +10,117 @@ import { err, ok, type Result } from '../domain/result';
 import type { Modifiers } from './gridNavigation';
 import { messageFor } from './messages';
 
-/** Figures are shown with `,` grouping thousands, and the first group never starts with a zero. */
-const GROUPED = /^[1-9]\d{0,2}(,\d{3})+(\.\d*)?$/;
-const NUMBER = /^(\d+(\.\d*)?|\.\d+)$/;
+/** What a column shows: its unit, and the display currency that money is shown in. */
+export interface ShownUnit {
+  readonly unit: DisplayUnit;
+  readonly currency: string;
+}
 
-/**
- * What a person typed into a cell, as a number in the unit shown. The grouping a cell is displayed
- * with is accepted back, so is a comma for the point (`0,5`), and blank means zero. `0,333` is a
- * third, not 333: a group of thousands does not start with a zero.
- */
-export function parseFigure(text: string): Result<number, string> {
-  const typed = text.trim();
-  if (typed === '') return ok(0);
-  const plain = GROUPED.test(typed) ? typed.replaceAll(',', '') : typed.replace(',', '.');
-  return NUMBER.test(plain) ? ok(Number(plain)) : err('Enter a number, for example 0.5.');
+/** A figure as typed: a number alone, a number with its unit (`88 h`, `50%`), or money (`€7,880`). */
+export type TypedFigure =
+  | { readonly value: number; readonly unit: null }
+  | { readonly value: number; readonly unit: Exclude<DisplayUnit, 'cost'> }
+  | { readonly value: number; readonly unit: 'cost'; readonly currency: string };
+
+const SHAPE = /^([-−])?\s*([\p{L}%€$£]*)\s*([-−])?\s*([\d.,\s]*?)\s*([\p{L}%€$£]*)$/u;
+const NUMBER = /^(\d+(\.\d*)?|\.\d+)$/;
+/** `7,880.00`: the grouping a cell is shown with. A group never starts with a zero, so `0,333` is a third. */
+const GROUPED_EN = /^[1-9]\d{0,2}(,\d{3})+(\.\d*)?$/;
+/** `7.880,00`: unambiguous only with the decimal comma. */
+const GROUPED_DE = /^[1-9]\d{0,2}(\.\d{3})+,\d*$/;
+const GROUPED_SPACES = /^[1-9]\d{0,2}(\s\d{3})+([.,]\d*)?$/;
+/** `7.880` is seven point eight eight to a reader of English and 7880 to a reader of German. */
+const DOT_GROUPS = /^[1-9]\d{0,2}(\.\d{3})+$/;
+
+const HOURS = new Set(['h', 'hr', 'hrs', 'hour', 'hours']);
+const CURRENCY_SYMBOLS: Readonly<Record<string, string>> = {
+  '€': 'EUR',
+  $: 'USD',
+  us$: 'USD',
+  '£': 'GBP',
+};
+const CURRENCY_CODES = new Set(Intl.supportedValuesOf('currency'));
+
+const EXAMPLE: Readonly<Record<DisplayUnit, string>> = {
+  personMonths: '0.5',
+  hours: '88',
+  capacityPercent: '50',
+  cost: '7,880.00',
+};
+
+type Marker =
+  | { readonly unit: null }
+  | { readonly unit: Exclude<DisplayUnit, 'cost'> }
+  | { readonly unit: 'cost'; readonly currency: string };
+
+function markerOf(written: string): Marker | null {
+  const name = written.toLowerCase();
+  if (name === '') return { unit: null };
+  if (name === '%') return { unit: 'capacityPercent' };
+  if (name === 'pm') return { unit: 'personMonths' };
+  if (HOURS.has(name)) return { unit: 'hours' };
+  const code = CURRENCY_SYMBOLS[name] ?? name.toUpperCase();
+  return CURRENCY_CODES.has(code) ? { unit: 'cost', currency: code } : null;
+}
+
+function numberIn(body: string): number | null {
+  const plain = GROUPED_EN.test(body)
+    ? body.replaceAll(',', '')
+    : GROUPED_DE.test(body)
+      ? body.replaceAll('.', '').replace(',', '.')
+      : GROUPED_SPACES.test(body)
+        ? body.replace(/\s/g, '').replace(',', '.')
+        : body.replace(',', '.');
+  return NUMBER.test(plain) ? Number(plain) : null;
 }
 
 /**
- * The person-months that a typed figure stands for. Person-months and percent need nothing else;
- * hours and cost are converted for the person and month of the cell, so `context` is null only when
- * that is not known.
+ * What a person typed into a cell of a column in `shown`, or `null` if it is not a figure. The
+ * grouping a cell is shown with is accepted back, so are a comma for the point (`0,5`), spaces
+ * between thousands and `7.880,00`; `7.880` is refused as money, where it could mean either. A unit
+ * may stand before or after the number, a minus before either; blank means zero.
+ */
+export function parseFigure(text: string, shown: DisplayUnit): TypedFigure | null {
+  const typed = text.trim();
+  if (typed === '') return { value: 0, unit: null };
+  const [, leading, before = '', inner, body = '', after = ''] = SHAPE.exec(typed) ?? [];
+  const signs = [leading, inner].filter((sign) => sign !== undefined).length;
+  if (body === '' || (before !== '' && after !== '') || signs > 1) return null;
+  const marker = markerOf(before || after);
+  if (marker === null) return null;
+  if ((marker.unit ?? shown) === 'cost' && DOT_GROUPS.test(body)) return null;
+  const number = numberIn(body);
+  if (number === null) return null;
+  return { ...marker, value: signs === 1 ? -number : number };
+}
+
+const moneyIn = (currency: string): string =>
+  currency === 'EUR'
+    ? 'Enter money in EUR, the currency shown.'
+    : `Enter money in ${currency}, the currency shown, or in EUR.`;
+
+/**
+ * The person-months that a typed figure stands for. A figure is read in the unit shown unless
+ * another is written with it, so `88 h` is hours in any column; money is in the display currency,
+ * or in EUR when written so. Person-months and percent need nothing else; hours and cost are
+ * converted for the person and month of the cell, so `context` is null only when that is not known.
  */
 export function personMonthsFromEntry(
   text: string,
-  unit: DisplayUnit,
+  shown: ShownUnit,
   context: ConversionContext | null,
 ): Result<number, string> {
-  const typed = parseFigure(text);
-  if (!typed.ok) return typed;
+  const typed = parseFigure(text, shown.unit);
+  if (typed === null) return err(`Enter a number, for example ${EXAMPLE[shown.unit]}.`);
+  if (typed.value < 0) return err('An allocation cannot be negative.');
   // Zero clears a cell in every unit, whatever the month costs: it needs no conversion.
   if (typed.value === 0) return ok(0);
-  const personMonths = convert(typed.value, unit, context);
+  let conversion = context;
+  if (typed.unit === 'cost' && typed.currency !== shown.currency) {
+    if (typed.currency !== 'EUR') return err(moneyIn(shown.currency));
+    conversion = context && { ...context, currencyPerEur: 1 };
+  }
+  const personMonths = convert(typed.value, typed.unit ?? shown.unit, conversion);
   if (!personMonths.ok) return personMonths;
   return isValidAllocationAmount(personMonths.value)
     ? personMonths
@@ -68,15 +148,21 @@ export type EntryStart =
   | { readonly kind: 'clear' };
 
 /**
- * What a key does to a cell that is not being edited: Enter and F2 open it on its current text, the
- * first character of a number replaces the text, Delete and Backspace clear it. A combination with
- * Ctrl, Alt or Cmd is a shortcut, not typing.
+ * What a key does to a cell that is not being edited: Enter and F2 open it on its current text, a
+ * printable character replaces the text (so a minus or a currency sign is kept, and a figure that
+ * is not one is refused with a reason), Delete and Backspace clear it. Space is left to the grid.
+ * Ctrl or Cmd with a key is a shortcut, but Ctrl with Alt is AltGr, which types € on a German
+ * keyboard. Alt alone types characters on a Mac, while with a letter or digit elsewhere it is the
+ * browser's shortcut.
  */
 export function entryStartedBy(key: string, modifiers: Modifiers): EntryStart | null {
   if (key === 'Enter' || key === 'F2') return { kind: 'open' };
   if (key === 'Delete' || key === 'Backspace') return { kind: 'clear' };
-  const shortcut = modifiers.ctrl || modifiers.alt || modifiers.meta;
-  return !shortcut && /^[0-9.,]$/.test(key) ? { kind: 'type', text: key } : null;
+  const shortcut =
+    modifiers.meta ||
+    (modifiers.ctrl && !modifiers.alt) ||
+    (modifiers.alt && !modifiers.ctrl && /^[a-z0-9]$/i.test(key));
+  return !shortcut && /^\S$/u.test(key) ? { kind: 'type', text: key } : null;
 }
 
 export interface EntryExit {
@@ -101,7 +187,19 @@ export function entryEndedBy(key: string, shift: boolean): EntryExit | null {
 
 /**
  * Whether what was typed is something other than what the cell showed. A cell shows a rounded
- * figure: committing the same text again would replace the exact stored value (a third shown as
- * 0.33) with the rounded one, and could change which edit is the latest.
+ * figure: committing the same figure again, however it is written (`€7,880`, `7880.0`), would
+ * replace the exact stored value (a third shown as 0.33) with the rounded one, and could change
+ * which edit is the latest. Blank or zero over a figure is a change even where the figure shows as
+ * zero (`0.00` for days without a rate): it removes the allocation.
  */
-export const isChange = (typed: string, shown: string): boolean => typed.trim() !== shown;
+export function isChange(typed: string, shownText: string, shown: ShownUnit): boolean {
+  if (typed.trim() === shownText) return false;
+  const now = parseFigure(typed, shown.unit);
+  if (now?.value === 0) return shownText !== '';
+  const before = parseFigure(shownText, shown.unit);
+  if (now === null || before === null) return true;
+  const sameUnit =
+    (now.unit ?? shown.unit) === shown.unit &&
+    (now.unit !== 'cost' || now.currency === shown.currency);
+  return !sameUnit || now.value !== before.value;
+}

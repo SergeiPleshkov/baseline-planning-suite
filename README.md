@@ -242,7 +242,10 @@ browser (`e2e`).
 
 ## Development
 
-Requires Node 24 and pnpm (version pinned in `package.json` → `packageManager`).
+Requires Node 24 and pnpm; pnpm switches to the version pinned in `package.json` →
+`packageManager`. Install it with `npm install -g --allow-scripts=pnpm pnpm`: recent npm skips a
+package's install scripts unless they are allowed, and without its script pnpm has no working
+command on Windows (elsewhere it runs through Node). The Dockerfiles install it the same way.
 
 ```bash
 pnpm install
@@ -281,19 +284,23 @@ pnpm e2e        # Playwright, in e2e/
   that service was stopped on purpose: its paths must answer with a gateway error while everything
   else stays healthy.
 - **Browser tests** read the reference cell (Adaeze Okafor, March 2026) in all four units and in
-  USD, open its calculation, check that `?break=people` and `?break=delivery` take down one panel
-  and leave the other working, check that a wide staffing grid does not squeeze People when the two sit side by side, and correct her rate in People to see Delivery reprice without a
-  reload, on the same page and in another tab. The browser runs in the Auckland time zone, because
-  dates are UTC-only. The tests expect the seed data: a test puts Adaeze Okafor's second rate
-  (`rate-002`) back afterwards, also when it failed halfway, but any other edit made by hand stays;
-  `docker compose down -v` resets the stack. The first run needs a browser:
+  USD and open its calculation; type the reference figure into it in every unit and with a unit
+  written next to it (`7,880.00`, `€7,880`, `88 h`, `50%`), and a negative figure that must be
+  refused; remove her first rate in People to see the days before the next one cost nothing and be
+  marked; check that `?break=people` and `?break=delivery` take down one panel and leave the other
+  working, and that a wide staffing grid does not squeeze People side by side; and correct her rate
+  in People to see Delivery reprice without a reload, on the same page and in another tab. The
+  browser runs in the Auckland time zone, because dates are UTC-only. The tests expect the seed
+  data. They put her two rates and the reference cell back before and after each test, also when
+  one failed halfway (a first rate added back gets a new id); any other edit made by hand stays,
+  and `docker compose down -v` resets the stack. The first run needs a browser:
   `pnpm --filter @baseline/e2e exec playwright install chromium`, or set
   `E2E_BROWSER_CHANNEL=msedge` (or `chrome`) to use one that is installed. `E2E_BASE_URL` points
   the tests at another address.
 - **CI** (`.github/workflows/ci.yml`) runs on every push to main and every pull request. The first
   job installs with the lockfile frozen and runs format check, typecheck, lint, knip, tests and
-  build. The second builds the three images, starts them, runs smoke, the browser tests, and smoke again
-  with People and then Delivery stopped.
+  build. The second builds the three images, starts them, runs smoke, the browser tests, and smoke
+  again with People and then Delivery stopped.
 
 ## Contracts
 
@@ -497,16 +504,23 @@ item's name opens or closes it.
 
 - **Rows.** A breakdown row's figures are sums of what is below it and are marked DERIVED. A person
   gets a row under a leaf once they have an allocation on it, or are assigned to it, listed by
-  name and then id. Months
-  outside the project's dates are shaded and empty.
+  name and then id. Months outside the project's dates are shaded and empty. The grid scrolls in
+  its own box, so the months and the totals stay in view on a long breakdown.
 - **Editing.** A person's cell inside the project is edited in place. Enter or F2 opens it on its
-  text, a digit starts a new figure, Delete clears it; Enter saves and moves down, Tab saves and
-  moves along (Shift+Tab back), Escape drops the text. Zero or blank removes the allocation. A
-  figure is read in the unit shown, with the grouping the cells use (`1,250` is 1250, `0,5` is
-  0.5) and converted to person-months for that person and month; money cannot be typed for a
-  month without a rate. A cell is saved only if the text differs from what it showed, so pressing
-  Enter on `0.33`, which displays an exact third, leaves the stored third alone. The change shows
-  at once and is read back from the service; a refusal is shown above the grid.
+  text, typing starts a new figure, Delete clears it; Enter saves and moves down, Tab saves and
+  moves along (Shift+Tab back), Escape drops the text. Zero or blank removes the allocation.
+- **What can be typed.** A figure is read in the unit shown and converted to person-months for
+  that person and month. The grouping the cells use is read back (`1,250` is 1250, `0,5` is 0.5,
+  and a group never starts with a zero, so `0,333` is a third), as are spaces between thousands
+  and `7.880,00`; `7.880` alone is seven point eight eight, and is refused as money, where it could
+  also mean 7880. A unit written before or after the number wins over the one shown: `88 h`, `50%`, `0.5 pm`, `€7,880`, `7880 EUR`. Money is in the
+  display currency, or in EUR when written so. A negative figure, more than 100 person-months, and
+  money in a month without a rate are refused with the reason. Text that cannot be saved when the
+  focus moves to another cell is dropped, and a message above the grid names the cell and says
+  why; moving to another window keeps the text being typed. A cell is saved only if the figure
+  differs from what it showed, so pressing Enter on `0.33`, which displays an exact third, or
+  typing `€7,880` over `7,880.00`, leaves the stored value and the order of edits alone. The
+  change shows at once and is read back from the service; a refusal is shown above the grid.
 - **Assigning.** "Assign person…" gives a person a row on a leaf before they have any allocation
   there. The row exists in this view only and is not saved: it stays after its figures are
   cleared, and is gone when the project is changed or the page is reloaded.
@@ -516,13 +530,13 @@ item's name opens or closes it.
   tinted lighter. Hovering a cell of the month says the load, where the other contributions are and
   which one is blamed. The seed has no timestamps and no authors, so "edited last" is the order of
   the edits (the file order for the seed) and the screen cannot say who made one or when. "Over
-  capacity" below the grid lists every such person-month that involves the project, by name and month, with
-  what it is made of and a Show button that opens the right row at the right month.
+  capacity" above the grid lists every such person-month that involves the project, by name and
+  month, with what it is made of and a Show button that opens the right row at the right month.
 - **Without a rate.** In cost, a cell whose month has working days with no rate for that person
   carries a ◇ saying how many; those days count as zero in the cost, as the blended rate does.
 - **Calculation.** The panel under the grid shows the person's cell that last had the focus,
-  and lays it out like figure 4 of the case study: the working days and the hours in a person-month, the
-  month split by rate with hours and cost per slice, the blended rate, and the person's load in
+  and lays it out like figure 4 of the case study: the working days and the hours in a
+  person-month, the month split by rate with hours and cost per slice, the blended rate, and the person's load in
   that month by project and work item, with its edit order. Its figures are rounded together too,
   so slices add up to the totals shown. For the reference cell it reads 8 days at €80.00 =
   32.00 h, €2,560.00; 14 days at €95.00 = 56.00 h, €5,320.00; 88.00 h and €7,880.00 in all.
