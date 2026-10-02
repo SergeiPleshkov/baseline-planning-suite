@@ -2,7 +2,7 @@ import { workingDaysIn, type IsoDate, type YearMonth } from './calendar';
 import { rateOn, type RateTimeline } from './rateTimeline';
 
 /** Consecutive working days priced at the same rate; `null` means no rate existed yet. */
-export interface RateSlice {
+interface RateSlice {
   readonly firstDay: IsoDate;
   readonly lastDay: IsoDate;
   readonly workingDays: number;

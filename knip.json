@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [".claude/hooks/format-on-write.mjs"]
+    },
+    "apps/shell": {
+      "entry": ["src/index.tsx", "nginx/make-config-template.mjs"]
+    }
+  }
+}

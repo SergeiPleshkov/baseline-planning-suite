@@ -56,7 +56,7 @@ export interface GridCell {
   readonly unpriced: Unpriced | null;
 }
 
-export interface OverCapacity {
+interface OverCapacity {
   readonly personMonths: number;
   readonly percentSteps: number;
   /** This allocation is the one edited last, so the over-allocation is blamed on it. */
@@ -65,7 +65,7 @@ export interface OverCapacity {
   readonly contributions: readonly Contribution[];
 }
 
-export interface Unpriced {
+interface Unpriced {
   readonly days: number;
   readonly workingDays: number;
 }
@@ -81,7 +81,7 @@ interface LineBase {
 }
 
 /** A node of the breakdown. Its figures are sums of what is below it, so it is read-only. */
-export interface ItemLine extends LineBase {
+interface ItemLine extends LineBase {
   readonly kind: 'item';
   readonly item: BreakdownItem;
   readonly hasChildren: boolean;

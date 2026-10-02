@@ -4,7 +4,7 @@ import type { BreakdownItemId, EmployeeId } from '../domain/ids';
 import styles from './Dialogs.module.css';
 import { Modal } from './Modal';
 
-export interface PersonOption {
+interface PersonOption {
   readonly id: EmployeeId;
   readonly name: string;
 }

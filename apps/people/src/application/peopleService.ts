@@ -25,7 +25,7 @@ export type CorrectRateFailure = CorrectRateError;
 export type RemoveRateFailure = RemoveRateError;
 export type ClearRatesFailure = 'unknown-employee';
 
-export interface RateChange {
+interface RateChange {
   readonly revision: number;
   readonly rate: RateRecordDto;
 }

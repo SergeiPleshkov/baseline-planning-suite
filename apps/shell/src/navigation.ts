@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-export const VIEWS = ['people', 'delivery', 'side-by-side'] as const;
+const VIEWS = ['people', 'delivery', 'side-by-side'] as const;
 export type View = (typeof VIEWS)[number];
 
 const DEFAULT_VIEW: View = 'people';

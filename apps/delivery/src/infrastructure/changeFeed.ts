@@ -9,7 +9,7 @@ export interface EventSourceLike {
 
 export type EventSourceFactory = (url: string) => EventSourceLike;
 
-export const browserEventSource: EventSourceFactory = (url) => new EventSource(url);
+const browserEventSource: EventSourceFactory = (url) => new EventSource(url);
 
 /** `EventSource.CLOSED`: the browser has given up on the stream. */
 const CLOSED = 2;

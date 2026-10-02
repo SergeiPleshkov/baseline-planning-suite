@@ -5,7 +5,7 @@ import type { RateHistory } from '../domain/rates';
 import { stateFromDocument } from './document';
 import type { ChangeFeed, CommandResult, PeopleGateway, WorkloadGateway } from './ports';
 
-export interface MonthLoad {
+interface MonthLoad {
   readonly month: string;
   readonly personMonths: number;
   readonly status: 'within' | 'over';
@@ -16,7 +16,7 @@ export interface EmployeeLoad {
   readonly overMonths: number;
 }
 
-export type RegisterView =
+type RegisterView =
   | { readonly status: 'loading' }
   | { readonly status: 'failed'; readonly message: string }
   | {

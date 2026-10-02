@@ -3,7 +3,7 @@ import { expect, type APIRequestContext, type Locator, type Page } from '@playwr
 /** Adaeze Okafor's second rate: €95.00 an hour from 12 March 2026. */
 const OKAFOR_SECOND_RATE = { id: 'rate-002', from: '12 Mar 2026', eur: 95 } as const;
 
-export const staffingGrid = (page: Page): Locator => page.getByRole('treegrid');
+const staffingGrid = (page: Page): Locator => page.getByRole('treegrid');
 
 export async function openStaffing(page: Page, path: string): Promise<void> {
   await page.goto(path);

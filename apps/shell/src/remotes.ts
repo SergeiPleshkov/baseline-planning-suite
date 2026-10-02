@@ -2,7 +2,7 @@ import { REMOTE_APP_EXPOSE, type RemoteAppProps } from '@baseline/host-contract'
 import { loadRemote, registerRemotes } from '@module-federation/enhanced/runtime';
 import type { ComponentType } from 'react';
 
-export const REMOTE_NAMES = ['people', 'delivery'] as const;
+const REMOTE_NAMES = ['people', 'delivery'] as const;
 export type RemoteName = (typeof REMOTE_NAMES)[number];
 export type RemoteEntries = Readonly<Record<RemoteName, string>>;
 

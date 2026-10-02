@@ -13,7 +13,7 @@ import { messageFor, movedAllocationsNotice, type TreeCommandError } from './mes
 import { stateFromDocument, type DeletionSummaryDto } from './planDocument';
 import type { CommandResult, DeliveryGateway, Refusal } from './ports';
 
-export type PlanView =
+type PlanView =
   | { readonly status: 'loading' }
   | { readonly status: 'failed'; readonly message: string }
   | {
@@ -29,10 +29,9 @@ export interface DeliverySnapshot {
   readonly plan: PlanView;
 }
 
-export type CommandOutcome =
-  { readonly ok: true } | { readonly ok: false; readonly message: string };
+type CommandOutcome = { readonly ok: true } | { readonly ok: false; readonly message: string };
 
-export type AddOutcome =
+type AddOutcome =
   | { readonly ok: true; readonly notice: string | null; readonly itemId: BreakdownItemId }
   | { readonly ok: false; readonly message: string };
 

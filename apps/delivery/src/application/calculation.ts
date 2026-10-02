@@ -20,7 +20,7 @@ export interface CalculationInput {
   readonly currencyPerEur: number;
 }
 
-export interface SliceCalculation {
+interface SliceCalculation {
   readonly firstDay: IsoDate;
   readonly lastDay: IsoDate;
   readonly workingDays: number;
@@ -31,7 +31,7 @@ export interface SliceCalculation {
   readonly costSteps: number | null;
 }
 
-export interface ContributionFigure extends Contribution {
+interface ContributionFigure extends Contribution {
   readonly personMonthsSteps: number;
 }
 
