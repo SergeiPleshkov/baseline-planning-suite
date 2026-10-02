@@ -1,0 +1,4 @@
+{
+  "peopleApi": "/api/people/v1",
+  "deliveryApi": "/api/delivery/v1"
+}

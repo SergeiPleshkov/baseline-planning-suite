@@ -23,7 +23,7 @@ interface RateHistoryContents {
 }
 
 /** The domain cannot import the contract, so its limit is repeated here and checked against it in a test. */
-const MAX_HOURLY_RATE_EUR = 10_000;
+export const MAX_HOURLY_RATE_EUR = 10_000;
 
 /** A positive amount in whole cents: 1.005 is refused, not rounded to a rate nobody entered. */
 export const isValidHourlyRate = (rate: number): boolean =>

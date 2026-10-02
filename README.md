@@ -181,6 +181,36 @@ with a plain form post.
   June 2026 at 1.18, blamed on `alloc-073`; a test recomputes them from the raw seed. People refuses
   to start on a seed that breaks its rate rules; a test checks the shipped one does not.
 
+## The People screen
+
+The register lists the employees with their role, weekly hours, the hourly rate in force today (in
+the shell's display currency) and a badge when Delivery shows them over capacity in some month.
+Search matches name and role together, ignoring case and accents, and a role filter narrows it
+further.
+
+- **Rate history.** Choosing an employee opens their card: the rates with the period each one
+  covers, and forms to add (also backdated), edit and remove them. Rates are typed in EUR, the
+  currency they are stored in; a value typed in another currency would seldom be a whole cent. The
+  display-currency equivalent is shown next to it. Removing a rate says what happens to the days
+  around it first, and removing the only one is a separate "remove all rates" confirmation.
+  Whatever the service refuses (a start date already taken, say) is shown in its own words.
+- **Monthly load** comes from Delivery's workload contract: every month with allocations as a share
+  of the person's capacity, over-capacity months marked with text as well as colour.
+- **Without Delivery** the register and the rate editor keep working; the screen says the load
+  figures are not available and offers to try again.
+- **Where it gets its data.** The remote reads `config.json` next to its own files (the shell does
+  not pass it) to find the People and Delivery APIs, so the addresses are not in the bundle. The
+  paths in it are resolved against the address of the page, which works behind the gateway and the
+  development proxies; the file ships in the remote's `dist` and is replaced to point elsewhere. In
+  development the dev servers proxy `/api/people` and `/api/delivery` to the servers on :3011
+  and :3012, like the gateway does.
+- **Structure.** State lives in `PeopleStore` (no React, tested on its own); React only subscribes
+  to it. The screen re-reads the rates after every change instead of patching its own copy. The
+  figures are read when the screen opens or on retry; they do not update by themselves yet. If a
+  refresh fails, what was on screen stays, marked as possibly out of date; a change whose answer
+  was lost is followed by a re-read, because it may have been saved. "Today" is the UTC date at the
+  moment the screen opens.
+
 ## Running with Docker
 
 ```bash

@@ -1,0 +1,100 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.heading h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dde1e6;
+}
+
+.number {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.rowPanel {
+  background: #f3f4f6;
+}
+
+.panel {
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirmation p {
+  margin: 0;
+}
+
+.question {
+  font-weight: 600;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty,
+.hint {
+  margin: 0;
+  color: #5a6472;
+  font-size: 13px;
+}
+
+.link {
+  padding: 0;
+  color: #1a56c4;
+  font: inherit;
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.section button {
+  font: inherit;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,0 +1,33 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #dde1e6;
+  border-radius: 6px;
+}
+
+.name {
+  margin: 0;
+  font-size: 18px;
+}
+
+.name:focus {
+  outline: 2px solid #1a56c4;
+  outline-offset: 2px;
+}
+
+.facts {
+  margin: 4px 0 0;
+  color: #5a6472;
+  font-size: 13px;
+}
+
+.saved {
+  margin: 0;
+  min-height: 1.2em;
+  color: #1d6b3a;
+  font-size: 13px;
+  font-weight: 600;
+}

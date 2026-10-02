@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p src/server/tsconfig.json && tsc -p tsconfig.domain.json"
   },
   "dependencies": {
+    "@baseline/delivery-contract": "workspace:*",
     "@baseline/host-contract": "workspace:*",
     "@baseline/people-contract": "workspace:*",
     "@hono/node-server": "^2.1.3",

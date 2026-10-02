@@ -24,5 +24,13 @@ export default defineConfig({
   // Chunks resolve from wherever the manifest was served: standalone, in the shell, behind a gateway.
   output: { assetPrefix: 'auto' },
   // Development only: the shell is on another port. Deployed, everything is same-origin.
-  server: { port: 3001, cors: { origin: /^http:\/\/localhost:\d+$/ } },
+  server: {
+    port: 3001,
+    cors: { origin: /^http:\/\/localhost:\d+$/ },
+    // The same routes the gateway has, so the front end finds its APIs in development as well.
+    proxy: {
+      '/api/people': 'http://localhost:3011',
+      '/api/delivery': 'http://localhost:3012',
+    },
+  },
 });

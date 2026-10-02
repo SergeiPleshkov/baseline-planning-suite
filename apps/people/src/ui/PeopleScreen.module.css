@@ -1,0 +1,37 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.message {
+  margin: 16px 0 0;
+}
+
+.stale {
+  grid-column: 1 / -1;
+  padding: 8px 12px;
+  color: #8c1d18;
+  background: #fdeceb;
+  border-radius: 6px;
+}
+
+.stale p {
+  margin: 0 0 8px;
+}
+
+.hint {
+  margin: 0;
+  padding: 16px;
+  color: #5a6472;
+  border: 1px dashed #8a94a3;
+  border-radius: 6px;
+}

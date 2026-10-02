@@ -1,0 +1,52 @@
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field input {
+  padding: 6px 8px;
+  font: inherit;
+  border: 1px solid #8a94a3;
+  border-radius: 4px;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: #b3261e;
+}
+
+.hint {
+  margin: 0;
+  color: #5a6472;
+  font-size: 12px;
+}
+
+.error {
+  margin: 0;
+  color: #b3261e;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-self: flex-end;
+}
+
+.actions button {
+  padding: 6px 12px;
+  font: inherit;
+}

@@ -22,5 +22,13 @@ export default defineConfig({
     }),
   ],
   html: { title: 'Baseline' },
-  server: { port: 3000, historyApiFallback: true },
+  server: {
+    port: 3000,
+    historyApiFallback: true,
+    // The same routes the gateway has, so remotes find their APIs in development as well.
+    proxy: {
+      '/api/people': 'http://localhost:3011',
+      '/api/delivery': 'http://localhost:3012',
+    },
+  },
 });

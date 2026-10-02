@@ -94,6 +94,23 @@ export default defineConfig(
     },
   },
   {
+    // The browser bundle must never pull in the Node server that sits in the same package.
+    files: ['apps/*/src/{ui,application,infrastructure}/**/*.{ts,tsx}', 'apps/*/src/*.tsx'],
+    rules: {
+      'import-x/no-restricted-paths': [
+        'error',
+        {
+          zones: ['people', 'delivery'].map((app) => ({
+            target: `./apps/${app}/src`,
+            from: `./apps/${app}/src/server`,
+            except: [],
+            message: 'Front-end code must not import the Node server.',
+          })),
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/**/*.tsx'],
     extends: [reactHooks.configs.flat['recommended-latest']],
   },

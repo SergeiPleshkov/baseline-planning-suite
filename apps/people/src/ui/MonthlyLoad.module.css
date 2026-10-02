@@ -1,0 +1,53 @@
+.heading {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.note {
+  margin: 0;
+  color: #5a6472;
+  font-size: 13px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dde1e6;
+}
+
+.number {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.over {
+  font-weight: 600;
+  color: #8c1d18;
+  background: #fdeceb;
+}
+
+.link {
+  padding: 0;
+  color: #1a56c4;
+  font: inherit;
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
