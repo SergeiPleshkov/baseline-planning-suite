@@ -1,0 +1,111 @@
+.staffing {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.message {
+  margin: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 24px;
+}
+
+.units {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.units legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.unit,
+.unitOn {
+  position: relative;
+  padding: 6px 10px;
+  border: 1px solid #8a94a3;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.unitOn {
+  color: #fff;
+  background: #1a56c4;
+  border-color: #1a56c4;
+}
+
+.unit input,
+.unitOn input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.unit:has(input:focus-visible),
+.unitOn:has(input:focus-visible) {
+  outline: 2px solid #1a56c4;
+  outline-offset: 2px;
+}
+
+.horizon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.horizon button {
+  padding: 6px 10px;
+  font: inherit;
+}
+
+.horizon button[aria-pressed='true'] {
+  color: #fff;
+  background: #1a56c4;
+  border-color: #1a56c4;
+}
+
+.range {
+  min-width: 130px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.banner,
+.unavailable {
+  margin: 0;
+  padding: 8px 12px;
+  color: #8c1d18;
+  background: #fdeceb;
+  border-radius: 6px;
+}
+
+.banner p {
+  margin: 0 0 8px;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  color: #5a6472;
+  border: 1px dashed #8a94a3;
+  border-radius: 6px;
+}
+
+.legend {
+  margin: 0;
+  color: #5a6472;
+  font-size: 12px;
+}

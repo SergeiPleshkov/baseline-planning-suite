@@ -40,6 +40,17 @@
   font: inherit;
 }
 
+.modes {
+  display: flex;
+  gap: 4px;
+}
+
+.modes button[aria-pressed='true'] {
+  color: #fff;
+  background: #1a56c4;
+  border-color: #1a56c4;
+}
+
 .saving {
   min-width: 70px;
   color: #5a6472;

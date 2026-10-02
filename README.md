@@ -238,6 +238,36 @@ goes to its parent, Home and End jump), and the row that has the focus is the se
 - **If the service cannot be read** the plan on screen stays, marked as possibly out of date, with a
   Retry. The figures do not update by themselves yet.
 
+## The Delivery screen: staffing grid
+
+The Staffing view of the same project: the work breakdown as rows, with the people allocated to
+each leaf below it, one column per month and a total column and row. It is an ARIA treegrid: one
+tab stop, the arrow keys move between cells (Home and End go to the ends of a row, with Ctrl to the
+corners; combinations with Alt, Shift or Cmd are left to the browser), and Enter or Space on an
+item's name opens or closes it. It shows allocations; it does
+not edit them yet.
+
+- **Rows.** A breakdown row's figures are sums of what is below it and are marked DERIVED. A person
+  gets a row under a leaf once they have an allocation on it, listed by name and then id. Months
+  outside the project's dates are shaded and empty.
+- **Months.** The grid opens on the project's own span (Mar 26 – Feb 27 for Ledger Consolidation,
+  so the reference cell is on screen). ‹ and › move it by a month; "Project span" and
+  "Apr 26 – Mar 27" are presets. The totals cover the months shown.
+- **Four units.** Person-months (2 decimals), hours (2), % of capacity (1) and cost in the display
+  currency (2). The reference cell reads 0.50 · 88.00 · 50.0 · 7,880.00. Switching only changes
+  what is shown.
+- **Rounding.** Every figure in one unit is rounded together by `roundForDisplay`, so each total is
+  the sum of the figures it covers, in the rows, the columns and the grand total. Collapsing rows
+  changes no figure.
+- **People's data.** Hours need each person's contracted hours and cost also needs their rate
+  history, both read from People's API at the address in `peopleApi` of the remote's `config.json`.
+  If People cannot be read, person-months and percent still show, with people named by id; the
+  screen says what is missing and offers Retry, and hours and cost say why they are not shown.
+  The data is read when the Delivery remote starts and does not update by itself yet. A month
+  or person without a rate shows 0.00 in cost; it is not marked as unpriced yet.
+- **State.** The unit, the months and the open rows stay while the Breakdown view is shown, and
+  reset when another project is chosen.
+
 ## Running with Docker
 
 ```bash

@@ -29,6 +29,20 @@ export function yearMonth(value: string): YearMonth {
   return value as YearMonth;
 }
 
+export function addMonths(month: YearMonth, delta: number): YearMonth {
+  if (!Number.isInteger(delta))
+    throw new RangeError(`Not a whole number of months: ${String(delta)}`);
+  const index = Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1 + delta;
+  return yearMonth(`${String(Math.floor(index / 12)).padStart(4, '0')}-${pad((index % 12) + 1)}`);
+}
+
+/** Every month from `first` to `last`, both included; none when `last` is before `first`. */
+export function monthsBetween(first: YearMonth, last: YearMonth): readonly YearMonth[] {
+  const months: YearMonth[] = [];
+  for (let month = first; month <= last; month = addMonths(month, 1)) months.push(month);
+  return months;
+}
+
 /** Monday to Friday. Public holidays are ignored by design. */
 export function workingDaysIn(month: YearMonth): readonly IsoDate[] {
   const year = Number(month.slice(0, 4));

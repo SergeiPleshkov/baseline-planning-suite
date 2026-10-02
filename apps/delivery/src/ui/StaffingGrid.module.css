@@ -1,0 +1,126 @@
+.scroller {
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid #dde1e6;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.grid th,
+.grid td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #eef0f2;
+  white-space: nowrap;
+}
+
+.grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: right;
+}
+
+.grid thead .corner {
+  left: 0;
+  z-index: 3;
+  min-width: 260px;
+  text-align: left;
+}
+
+.rowHeader {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 260px;
+  background: #fff;
+  font-weight: 400;
+  text-align: left;
+  border-right: 1px solid #dde1e6;
+}
+
+.number {
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.totalColumn {
+  font-weight: 600;
+  border-left: 1px solid #dde1e6;
+}
+
+.derivedRow .rowHeader,
+.derivedRow td {
+  background: #f8f9fb;
+  font-weight: 600;
+}
+
+.derivedRow td.inactive {
+  background: repeating-linear-gradient(-45deg, #f3f4f6, #f3f4f6 4px, #fff 4px, #fff 8px);
+}
+
+.personRow .name {
+  font-weight: 400;
+}
+
+.planned {
+  background: #eef4ff;
+}
+
+.inactive {
+  background: repeating-linear-gradient(-45deg, #f3f4f6, #f3f4f6 4px, #fff 4px, #fff 8px);
+  color: transparent;
+}
+
+.totalRow th,
+.totalRow td {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: #f3f4f6;
+  border-top: 2px solid #8a94a3;
+  border-bottom: 0;
+  font-weight: 700;
+}
+
+.totalRow .rowHeader {
+  z-index: 3;
+}
+
+.grid th:focus-visible,
+.grid td:focus-visible {
+  outline: 2px solid #1a56c4;
+  outline-offset: -2px;
+}
+
+.toggle {
+  display: inline-block;
+  width: 16px;
+  color: #5a6472;
+  text-align: center;
+  cursor: pointer;
+}
+
+.name {
+  margin-right: 8px;
+}
+
+.derivedTag {
+  padding: 0 4px;
+  color: #5a6472;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid #c4cad3;
+  border-radius: 3px;
+}

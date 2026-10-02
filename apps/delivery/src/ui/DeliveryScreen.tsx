@@ -1,5 +1,7 @@
+import type { DisplayCurrency } from '@baseline/host-contract';
 import { useEffect, useRef, useState } from 'react';
 import type { DeliveryStore } from '../application/deliveryStore';
+import type { StaffStore } from '../application/staffStore';
 import {
   canHaveChildren,
   expandPathTo,
@@ -17,6 +19,7 @@ import { DeleteDialog } from './DeleteDialog';
 import { ItemPanel } from './ItemPanel';
 import { MoveDialog } from './MoveDialog';
 import { NameDialog } from './NameDialog';
+import { StaffingScreen } from './StaffingScreen';
 import { useDeliverySnapshot } from './useDeliveryStore';
 
 /** What a dialog is about is fixed when it opens: the plan may change under it (optimistically). */
@@ -31,8 +34,20 @@ type Dialog =
   | { readonly kind: 'move'; readonly item: Subject; readonly targets: readonly MoveTarget[] }
   | { readonly kind: 'delete'; readonly item: Subject };
 
-export function DeliveryScreen({ store }: { readonly store: DeliveryStore }) {
+interface Props {
+  readonly store: DeliveryStore;
+  readonly staff: StaffStore;
+  readonly currency: DisplayCurrency;
+}
+
+const MODES = [
+  { id: 'breakdown', label: 'Breakdown' },
+  { id: 'staffing', label: 'Staffing' },
+] as const;
+
+export function DeliveryScreen({ store, staff, currency }: Props) {
   const { plan: view } = useDeliverySnapshot(store);
+  const [mode, setMode] = useState<(typeof MODES)[number]['id']>('breakdown');
   const [chosenProject, setChosenProject] = useState<ProjectId | null>(null);
   const [selected, setSelected] = useState<BreakdownItemId | null>(null);
   const [collapsed, setCollapsed] = useState<ReadonlySet<BreakdownItemId>>(new Set());
@@ -144,65 +159,99 @@ export function DeliveryScreen({ store }: { readonly store: DeliveryStore }) {
             ))}
           </select>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            ask({ kind: 'add', parent: null });
-          }}
-        >
-          Add a top-level item
-        </button>
+        <div role="group" aria-label="View" className={styles.modes}>
+          {MODES.map((each) => (
+            <button
+              key={each.id}
+              type="button"
+              aria-pressed={each.id === mode}
+              onClick={() => {
+                setMode(each.id);
+              }}
+            >
+              {each.label}
+            </button>
+          ))}
+        </div>
+        {mode === 'breakdown' ? (
+          <button
+            type="button"
+            onClick={() => {
+              ask({ kind: 'add', parent: null });
+            }}
+          >
+            Add a top-level item
+          </button>
+        ) : null}
         <span className={styles.saving} role="status">
           {view.saving ? 'Saving…' : ''}
         </span>
       </div>
 
-      <p className={styles.notice} role="status">
-        {notice}
-      </p>
-
-      <div className={styles.layout}>
-        <div ref={treeArea} tabIndex={-1} className={styles.treeArea}>
-          {rows.length === 0 ? (
-            <p className={styles.empty}>
-              This project has no work breakdown yet. Add a top-level item to start.
-            </p>
-          ) : (
-            <BreakdownTree
-              label={`Work breakdown of ${project.name}`}
-              rows={rows}
-              selected={chosen?.id ?? null}
-              onSelect={setSelected}
-              onToggle={toggle}
-            />
-          )}
-        </div>
-
-        {chosen ? (
-          <ItemPanel
-            name={chosen.name}
-            path={pathOf(plan, chosen.id)}
-            depth={depthOf(plan, chosen.id)}
-            childCount={childrenOf(plan, chosen.id).length}
-            allocationCount={allocationsOn(plan, chosen.id).length}
-            canAddChild={canHaveChildren(plan, chosen.id)}
-            onAddChild={() => {
-              ask({ kind: 'add', parent: subjectOf(chosen) });
-            }}
-            onRename={() => {
-              ask({ kind: 'rename', item: subjectOf(chosen) });
-            }}
-            onMove={() => {
-              ask({ kind: 'move', item: subjectOf(chosen), targets: moveTargets(plan, chosen.id) });
-            }}
-            onDelete={() => {
-              ask({ kind: 'delete', item: subjectOf(chosen) });
-            }}
-          />
-        ) : (
-          <p className={styles.hint}>Select an item to add to it, rename, move or delete it.</p>
-        )}
+      {/* Kept mounted while hidden, so that the unit, months and open rows survive a visit to the other view. */}
+      <div hidden={mode !== 'staffing'}>
+        <StaffingScreen
+          key={project.id}
+          plan={plan}
+          project={project}
+          staff={staff}
+          currency={currency}
+        />
       </div>
+      {mode === 'breakdown' ? (
+        <>
+          <p className={styles.notice} role="status">
+            {notice}
+          </p>
+
+          <div className={styles.layout}>
+            <div ref={treeArea} tabIndex={-1} className={styles.treeArea}>
+              {rows.length === 0 ? (
+                <p className={styles.empty}>
+                  This project has no work breakdown yet. Add a top-level item to start.
+                </p>
+              ) : (
+                <BreakdownTree
+                  label={`Work breakdown of ${project.name}`}
+                  rows={rows}
+                  selected={chosen?.id ?? null}
+                  onSelect={setSelected}
+                  onToggle={toggle}
+                />
+              )}
+            </div>
+
+            {chosen ? (
+              <ItemPanel
+                name={chosen.name}
+                path={pathOf(plan, chosen.id)}
+                depth={depthOf(plan, chosen.id)}
+                childCount={childrenOf(plan, chosen.id).length}
+                allocationCount={allocationsOn(plan, chosen.id).length}
+                canAddChild={canHaveChildren(plan, chosen.id)}
+                onAddChild={() => {
+                  ask({ kind: 'add', parent: subjectOf(chosen) });
+                }}
+                onRename={() => {
+                  ask({ kind: 'rename', item: subjectOf(chosen) });
+                }}
+                onMove={() => {
+                  ask({
+                    kind: 'move',
+                    item: subjectOf(chosen),
+                    targets: moveTargets(plan, chosen.id),
+                  });
+                }}
+                onDelete={() => {
+                  ask({ kind: 'delete', item: subjectOf(chosen) });
+                }}
+              />
+            ) : (
+              <p className={styles.hint}>Select an item to add to it, rename, move or delete it.</p>
+            )}
+          </div>
+        </>
+      ) : null}
 
       {dialog?.kind === 'add' ? (
         <NameDialog

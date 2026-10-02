@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { isoDate, yearMonth } from './calendar';
 import { priceMonth } from './pricing';
 import { rateTimeline } from './rateTimeline';
-import { DISPLAY_UNITS, fromDisplayUnit, toDisplayUnit, type ConversionContext } from './units';
+import {
+  DISPLAY_UNITS,
+  fromDisplayUnit,
+  fromPlainUnit,
+  isPlainUnit,
+  toDisplayUnit,
+  toPlainUnit,
+  type ConversionContext,
+} from './units';
 
 const okafor = (currencyPerEur = 1): ConversionContext => ({
   pricing: priceMonth(
@@ -32,6 +40,16 @@ describe('reference cell in every unit (case study, figure 4)', () => {
     expect(toDisplayUnit(0.5, 'cost', okafor(1.17))).toBeCloseTo(9219.6, 9);
     const entered = fromDisplayUnit(9219.6, 'cost', okafor(1.17));
     expect(entered.ok && entered.value).toBeCloseTo(0.5, 12);
+  });
+});
+
+describe('plain units', () => {
+  it('are the units that need no pricing', () => {
+    expect(DISPLAY_UNITS.filter(isPlainUnit)).toEqual(['personMonths', 'capacityPercent']);
+    expect(toPlainUnit(0.5, 'capacityPercent')).toBe(50);
+    expect(toPlainUnit(0.5, 'personMonths')).toBe(0.5);
+    expect(fromPlainUnit(50, 'capacityPercent')).toBe(0.5);
+    expect(fromPlainUnit(0.5, 'personMonths')).toBe(0.5);
   });
 });
 

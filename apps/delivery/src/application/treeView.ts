@@ -21,7 +21,7 @@ export interface TreeRow {
   readonly expanded: boolean;
 }
 
-const topLevelOf = (plan: Plan, project: ProjectId): BreakdownItem[] =>
+export const topLevelOf = (plan: Plan, project: ProjectId): BreakdownItem[] =>
   [...plan.items.values()].filter((item) => item.projectId === project && item.parentId === null);
 
 /** The items of one project in tree order, children hidden below a collapsed parent. */

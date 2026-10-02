@@ -4,15 +4,17 @@ import {
   type DeliverySnapshot,
   type DeliveryStore,
 } from '../application/deliveryStore';
+import { createStaffStore, type StaffStore, type StaffView } from '../application/staffStore';
 import { createDeliveryGateway } from '../infrastructure/deliveryGateway';
+import { createPeopleSource } from '../infrastructure/peopleGateway';
 import { loadRemoteConfig } from '../infrastructure/remoteConfig';
 
 export type Runtime =
   | { readonly status: 'starting' }
   | { readonly status: 'failed'; readonly message: string }
-  | { readonly status: 'ready'; readonly store: DeliveryStore };
+  | { readonly status: 'ready'; readonly store: DeliveryStore; readonly staff: StaffStore };
 
-/** Reads this remote's `config.json`, then builds the store on the service it names. */
+/** Reads this remote's `config.json`, then builds the stores on the services it names. */
 export function useDeliveryRuntime(): { runtime: Runtime; restart: () => void } {
   const [runtime, setRuntime] = useState<Runtime>({ status: 'starting' });
   const [attempt, setAttempt] = useState(0);
@@ -25,8 +27,10 @@ export function useDeliveryRuntime(): { runtime: Runtime; restart: () => void } 
       (config) => {
         if (cancelled) return;
         const store = createDeliveryStore(createDeliveryGateway({ baseUrl: config.deliveryApi }));
-        setRuntime({ status: 'ready', store });
+        const staff = createStaffStore(createPeopleSource({ baseUrl: config.peopleApi }));
+        setRuntime({ status: 'ready', store, staff });
         void store.load();
+        void staff.load();
       },
       (error: unknown) => {
         if (cancelled) return;
@@ -50,5 +54,9 @@ export function useDeliveryRuntime(): { runtime: Runtime; restart: () => void } 
 }
 
 export function useDeliverySnapshot(store: DeliveryStore): DeliverySnapshot {
+  return useSyncExternalStore(store.subscribe, store.getSnapshot);
+}
+
+export function useStaffView(store: StaffStore): StaffView {
   return useSyncExternalStore(store.subscribe, store.getSnapshot);
 }

@@ -1,3 +1,4 @@
 {
-  "deliveryApi": "/api/delivery/v1"
+  "deliveryApi": "/api/delivery/v1",
+  "peopleApi": "/api/people/v1"
 }

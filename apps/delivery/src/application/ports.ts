@@ -8,6 +8,12 @@ export interface Refusal {
 
 export type CommandResult = { readonly ok: true } | Refusal;
 
+/** What Delivery reads from the People service. Reads throw when it cannot be reached. */
+export interface PeopleSource {
+  employees: () => Promise<unknown>;
+  rates: () => Promise<unknown>;
+}
+
 /** Reads throw when the service cannot be reached or answers something that breaks its contract. */
 export interface DeliveryGateway {
   plan: () => Promise<PlanDocument>;

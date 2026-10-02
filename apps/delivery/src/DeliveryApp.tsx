@@ -1,9 +1,13 @@
-import { HOST_CONTRACT_VERSION, type RemoteAppProps } from '@baseline/host-contract';
+import {
+  HOST_CONTRACT_VERSION,
+  type DisplayCurrency,
+  type RemoteAppProps,
+} from '@baseline/host-contract';
 import styles from './DeliveryApp.module.css';
 import { DeliveryScreen } from './ui/DeliveryScreen';
 import { useDeliveryRuntime } from './ui/useDeliveryStore';
 
-function Content() {
+function Content({ currency }: { readonly currency: DisplayCurrency }) {
   const { runtime, restart } = useDeliveryRuntime();
   if (runtime.status === 'starting') return <p role="status">Starting…</p>;
   if (runtime.status === 'failed') {
@@ -16,7 +20,7 @@ function Content() {
       </div>
     );
   }
-  return <DeliveryScreen store={runtime.store} />;
+  return <DeliveryScreen store={runtime.store} staff={runtime.staff} currency={currency} />;
 }
 
 export default function DeliveryApp({ host }: RemoteAppProps) {
@@ -39,7 +43,7 @@ export default function DeliveryApp({ host }: RemoteAppProps) {
           Editing as {host.activeUser.displayName} · amounts in {host.displayCurrency.code}
         </p>
       </header>
-      <Content />
+      <Content currency={host.displayCurrency} />
     </section>
   );
 }

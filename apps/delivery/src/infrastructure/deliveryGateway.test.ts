@@ -167,11 +167,10 @@ describe('deletionSummary', () => {
 
 describe('loadRemoteConfig', () => {
   it('reads config.json from the remote’s own public path', async () => {
-    const { fetchImpl, requests } = recorder(() => json({ deliveryApi: '/api/delivery/v1' }));
+    const config = { deliveryApi: '/api/delivery/v1', peopleApi: '/api/people/v1' };
+    const { fetchImpl, requests } = recorder(() => json(config));
     expect(await loadRemoteConfig(fetchImpl, '/mf/delivery/', 'http://host:8080/delivery')).toEqual(
-      {
-        deliveryApi: '/api/delivery/v1',
-      },
+      config,
     );
     expect(requests[0]?.url).toBe('http://host:8080/mf/delivery/config.json');
   });
@@ -181,5 +180,8 @@ describe('loadRemoteConfig', () => {
       /HTTP 404/,
     );
     await expect(loadRemoteConfig(() => json({}), 'http://h/', 'http://p/')).rejects.toThrow();
+    await expect(
+      loadRemoteConfig(() => json({ deliveryApi: '/d' }), 'http://h/', 'http://p/'),
+    ).rejects.toThrow();
   });
 });

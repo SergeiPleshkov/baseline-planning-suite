@@ -4,6 +4,7 @@ import type { Fetch } from './http';
 /** Where this remote finds the services it talks to; read at start-up, never bundled. */
 const RemoteConfigSchema = z.object({
   deliveryApi: z.string().min(1),
+  peopleApi: z.string().min(1),
 });
 
 export type RemoteConfig = z.infer<typeof RemoteConfigSchema>;
