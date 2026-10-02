@@ -15,6 +15,7 @@ import { cellKey, type Plan } from '../domain/plan';
 import { ok, type Result } from '../domain/result';
 import { workloadToContract } from '../infrastructure/workloadContract';
 import {
+  type DeletionSummaryDto,
   documentFromState,
   itemToDto,
   type AllocationDto,
@@ -25,13 +26,6 @@ import {
 
 export type UpdateItemFailure = MoveItemError | 'blank-name';
 export type DeleteItemFailure = 'unknown-item' | 'changed-since-confirmation';
-
-export interface DeletionSummaryDto {
-  readonly root: string;
-  readonly items: readonly string[];
-  readonly allocations: readonly { readonly id: string; readonly personMonths: number }[];
-  readonly personMonths: number;
-}
 
 export interface DeliveryService {
   plan: () => PlanDocument;

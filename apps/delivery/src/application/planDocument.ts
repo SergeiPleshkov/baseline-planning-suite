@@ -42,6 +42,14 @@ export type PlanDocument = z.infer<typeof PlanDocumentSchema>;
 export type ItemDto = z.infer<typeof ItemSchema>;
 export type AllocationDto = z.infer<typeof AllocationSchema>;
 
+/** What deleting an item would take, as shown to the person and sent back as the confirmation. */
+export interface DeletionSummaryDto {
+  readonly root: string;
+  readonly items: readonly string[];
+  readonly allocations: readonly { readonly id: string; readonly personMonths: number }[];
+  readonly personMonths: number;
+}
+
 export interface PlanState {
   /** Raised by every change to the plan; not to be confused with an allocation's own revision. */
   readonly revision: number;

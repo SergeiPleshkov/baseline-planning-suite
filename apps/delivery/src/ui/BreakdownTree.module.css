@@ -1,0 +1,53 @@
+.tree {
+  border: 1px solid #dde1e6;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #eef0f2;
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row:hover {
+  background: #f3f4f6;
+}
+
+.row:focus-visible {
+  outline: 2px solid #1a56c4;
+  outline-offset: -2px;
+}
+
+.selected,
+.selected:hover {
+  background: #e8effb;
+  box-shadow: inset 4px 0 0 #1a56c4;
+}
+
+.toggle {
+  display: inline-block;
+  width: 16px;
+  color: #5a6472;
+  text-align: center;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: #5a6472;
+  font-size: 12px;
+  white-space: nowrap;
+}

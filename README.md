@@ -211,6 +211,33 @@ further.
   was lost is followed by a re-read, because it may have been saved. "Today" is the UTC date at the
   moment the screen opens.
 
+## The Delivery screen: work breakdown
+
+Choose a project and its work breakdown is shown as a tree. It follows the ARIA tree pattern: one
+tab stop, the arrow keys move between rows (Right opens an item or steps into it, Left closes it or
+goes to its parent, Home and End jump), and the row that has the focus is the selected one.
+
+- **Commands** act on the selected item through native `<dialog>` modals: add a child (or a
+  top-level item), rename, move and delete.
+- **Moving** offers only places the domain accepts, so a refused move cannot be picked: the level
+  limit and the rule about leaves that hold allocations are applied before the list is shown.
+- **Adding a child to a leaf with allocations** moves them onto the child and says so ("2 allocations
+  were moved from … onto the new item …"). The button on the third level is disabled and the panel
+  says why.
+- **Deleting** shows what goes: the items by name, the allocations and their total, read from the
+  service. Confirming sends that summary back; if the subtree changed meanwhile nothing is deleted,
+  the dialog says so and shows the new summary.
+- **Optimistic changes.** Rename, move and delete show at once, are sent, and the plan is read
+  again either way: that read is also the rollback when the service refuses. The domain code that
+  checks the command is the same as on the server, so most refusals come back before anything is
+  sent. Adding an item waits for the service, which gives the item its id. Commands run one at a
+  time.
+- **While something is saving**, Escape and a click outside a dialog do nothing, so that a refusal
+  is always shown where it was asked for. The selected item is always visible: it is opened to
+  when it is added or moved, and closing a parent that holds it selects the parent.
+- **If the service cannot be read** the plan on screen stays, marked as possibly out of date, with a
+  Retry. The figures do not update by themselves yet.
+
 ## Running with Docker
 
 ```bash
