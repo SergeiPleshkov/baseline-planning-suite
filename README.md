@@ -88,6 +88,9 @@ same rules for the rate history and the register search, listed at the end of th
 - **Capacity is cross-project.** A person's load in a month is the sum of their allocations on every
   project. Above one person-month (100 %) they are over capacity, and the cause is the most recently
   edited allocation that contributes. Over-allocation is flagged, never blocked.
+- **Edit order in the seed.** The seed carries no timestamps, so the order of the file stands in for
+  the order of edits: an allocation listed later counts as edited more recently, and is the one
+  blamed when a person-month is over capacity.
 - The case study's reference calculation (A. Okafor, March 2026: 22 days, 176 h, 88 h, €7,880.00,
   blended €89.5455/h) is a test: `apps/delivery/src/domain/pricing.test.ts`.
 
@@ -137,6 +140,47 @@ pnpm build
 
 Each remote also runs on its own: open http://localhost:3001 or http://localhost:3002.
 
+The servers run separately from the front ends. `pnpm --filter @baseline/people dev:server` and
+`pnpm --filter @baseline/delivery dev:server` start them on :3011 and :3012, importing the seed into
+`data/` the first time; delete that folder to start over. `pnpm build` also bundles each server
+into `dist-server/main.js`.
+
+## Services
+
+People and Delivery each run a small Hono server next to their bundle. It serves the API below and,
+in a container, the built bundle as well. Both answer errors as `{ "error": { "code", "message" } }`:
+400 for a request that is not well formed (including a field the service does not know, which is
+never silently ignored), 404 for something that does not exist, 409 for a rule that refuses the
+change, 413 and 415 for a body that is too large (64 KB) or not JSON, 422 for a value that is not
+acceptable. Only `application/json` is accepted for writes, so a page on another origin cannot write
+with a plain form post.
+
+- **People**, under `/api/people/v1`: `GET /employees`, `GET /rates`, `POST /employees/:id/rates`,
+  `PATCH /rates/:id`, `DELETE /rates/:id`, `DELETE /employees/:id/rates` (clears them all, on
+  purpose) and `GET /events`. Reads follow the people contract; writes go through the domain rules
+  above.
+- **Delivery**, under `/api/delivery/v1`: `GET /plan`, `GET /workload`, `POST /items`,
+  `PATCH /items/:id` (rename, move, or both in one change), `GET /items/:id/deletion-summary`,
+  `POST /items/:id/deletion` (takes the summary back as the confirmation; a POST because a DELETE
+  has no defined body), `PUT /allocations` (zero removes) and `GET /events`. Every command runs
+  through the same domain code as the browser. The confirmation lists the allocations with their
+  amounts: if an id or an amount differs from what is stored now, nothing is deleted. An allocation
+  is at most 100 person-months. Delivery does not check an employee id against People.
+- **Storage.** One JSON document per service, written to a temporary file, flushed and renamed over
+  the old one. The first start imports the service's own part of the seed; after that the stored
+  document is the truth. A change is stored before it is visible or announced, and changes run one
+  after another. A data file that cannot be read, or breaks a domain rule, stops the service at start-up with its path
+  in the message; it is never replaced by the seed. On `SIGTERM` the service drops open event
+  streams and finishes pending writes before it exits.
+- **Revisions.** Each service counts its changes; reads and successful commands carry the revision
+  they reflect. An event says who changed and at which revision, and is sent only after the change
+  is stored. Delivery's stream announces workload changes only, when a published figure differs:
+  adding or moving an item, or adding a child to a leaf (which moves its allocations without
+  changing anyone's workload), is silent. Other tabs pick up tree edits when they next read `/plan`.
+- **Seed.** Delivery shows the six over-allocated person-months of the case study, e.g. M. Brandt in
+  June 2026 at 1.18, blamed on `alloc-073`; a test recomputes them from the raw seed. People refuses
+  to start on a seed that breaks its rate rules; a test checks the shipped one does not.
+
 ## Running with Docker
 
 ```bash
@@ -148,9 +192,14 @@ Open http://localhost:8080. Three containers, one per deployable unit; only the 
 - **shell** is nginx: it serves the shell and forwards `/mf/people/` and `/mf/delivery/` to the
   remotes, so the browser sees one origin and no CORS is needed. Its `/config.json` is generated
   when the container starts, from `PEOPLE_REMOTE_ENTRY` and `DELIVERY_REMOTE_ENTRY`.
-- **people** and **delivery** are nginx containers that serve their built bundle: the federated
+- **people** and **delivery** are Node containers running their server: the API, the federated
   remote at `/mf-manifest.json` and the standalone page at `/`, reachable as
-  http://localhost:8080/mf/people/ and http://localhost:8080/mf/delivery/.
+  http://localhost:8080/mf/people/ and http://localhost:8080/mf/delivery/. The server is bundled
+  with its dependencies, so the image holds no `node_modules`.
+- The gateway also forwards `/api/people/v1/` and `/api/delivery/v1/`, with buffering off so event
+  streams arrive as they are sent.
+- Each service keeps its data in a named volume: it survives a restart, and
+  `docker compose down -v` resets it to the seed.
 - Each image builds from the repository root, e.g. `docker build -f apps/people/Dockerfile .`, and
   downloads packages in a layer that depends only on `pnpm-lock.yaml`.
 - The gateway looks its upstreams up on every request, so it starts and stays up while a remote is

@@ -1,4 +1,4 @@
-# The one public entry point: the shell, and the same-origin path to each remote.
+# The one public entry point: the shell, and the same-origin paths to each remote and its API.
 # Upstreams are resolved per request, so the gateway starts and stays up while a remote is down;
 # only that remote's paths answer 502 and its panel shows the failure.
 resolver 127.0.0.11 valid=5s ipv6=off;
@@ -43,6 +43,27 @@ server {
     rewrite ^/mf/delivery/(.*)$ /$1 break;
     proxy_pass $upstream;
     proxy_connect_timeout 2s;
+  }
+
+  # Event streams (SSE) must not be buffered or cut short, or live updates arrive late or never.
+  location /api/people/v1/ {
+    set $upstream ${PEOPLE_UPSTREAM};
+    proxy_pass $upstream;
+    proxy_connect_timeout 2s;
+    proxy_http_version 1.1;
+    proxy_set_header Connection '';
+    proxy_buffering off;
+    proxy_read_timeout 1h;
+  }
+
+  location /api/delivery/v1/ {
+    set $upstream ${DELIVERY_UPSTREAM};
+    proxy_pass $upstream;
+    proxy_connect_timeout 2s;
+    proxy_http_version 1.1;
+    proxy_set_header Connection '';
+    proxy_buffering off;
+    proxy_read_timeout 1h;
   }
 
   location / {

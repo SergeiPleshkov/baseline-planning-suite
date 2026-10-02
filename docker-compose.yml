@@ -1,5 +1,6 @@
 # One command: `docker compose up --build`, then open http://localhost:8080.
-# Only the shell's gateway is published; the remotes are reached through it.
+# Only the shell's gateway is published; the remotes and their APIs are reached through it.
+# Each service keeps its data in a named volume: it survives restarts, `docker compose down -v` resets it to the seed.
 services:
   shell:
     build:
@@ -15,8 +16,16 @@ services:
     build:
       context: .
       dockerfile: apps/people/Dockerfile
+    volumes:
+      - people-data:/data
 
   delivery:
     build:
       context: .
       dockerfile: apps/delivery/Dockerfile
+    volumes:
+      - delivery-data:/data
+
+volumes:
+  people-data:
+  delivery-data:

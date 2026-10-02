@@ -13,6 +13,7 @@ Run from the repository root:
 - `pnpm lint`, `pnpm format:check`
 - `pnpm build`
 - `pnpm dev` — shell :3000, people :3001, delivery :3002
+- `pnpm --filter @baseline/people dev:server`, `…/delivery dev:server` — the APIs on :3011, :3012
 - `docker compose up --build` — the whole system on :8080 behind the shell's gateway
 
 ## Boundaries
