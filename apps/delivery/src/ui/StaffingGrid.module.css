@@ -1,6 +1,10 @@
+/* Scrolling inside its own box keeps the months and the totals in view on a long breakdown. */
 .scroller {
   max-width: 100%;
+  max-height: max(70vh, 24rem);
   overflow: auto;
+  /* The sticky months, totals and names must not cover the cell that the focus scrolls to. */
+  scroll-padding: 2.25rem 0 2.25rem 280px;
   border: 1px solid #dde1e6;
   border-radius: 6px;
   background: #fff;

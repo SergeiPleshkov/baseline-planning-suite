@@ -34,11 +34,10 @@ export function EmployeeCard({ employee, history, workload, currency, store }: P
         <p className={styles.facts}>
           {employee.role} · {employee.weeklyHours} hours a week
         </p>
+        <p className={styles.saved} role="status">
+          {saved}
+        </p>
       </header>
-
-      <p className={styles.saved} role="status">
-        {saved}
-      </p>
 
       <RateHistoryEditor
         employee={employee}

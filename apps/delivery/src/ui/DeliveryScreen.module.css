@@ -72,7 +72,7 @@
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@container (max-width: 560px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }

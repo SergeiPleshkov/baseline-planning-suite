@@ -1,4 +1,6 @@
+/* Layouts follow the panel's width, not the window's: side by side, a wide window holds a narrow panel. */
 .app {
+  container-type: inline-size;
   padding: 16px 24px;
 }
 

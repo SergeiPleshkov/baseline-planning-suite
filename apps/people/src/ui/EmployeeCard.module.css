@@ -13,7 +13,7 @@
   font-size: 18px;
 }
 
-.name:focus {
+.name:focus-visible {
   outline: 2px solid #1a56c4;
   outline-offset: 2px;
 }
@@ -24,9 +24,10 @@
   font-size: 13px;
 }
 
+/* The line is kept, so that the card does not move under the pointer when a change is saved. */
 .saved {
-  margin: 0;
   min-height: 1.2em;
+  margin: 4px 0 0;
   color: #1d6b3a;
   font-size: 13px;
   font-weight: 600;

@@ -1,4 +1,7 @@
+/* It stays beside a long tree, so that the commands are in reach of the item chosen far down. */
 .panel {
+  position: sticky;
+  top: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
