@@ -5,7 +5,7 @@ import { breakdownItemId, employeeId, type EmployeeId } from '../domain/ids';
 import { createPlan } from '../domain/plan';
 import { allocation, items, projects, testPlan } from '../domain/plan.fixtures';
 import { rateTimeline, type RateTimeline } from '../domain/rateTimeline';
-import type { StaffMember } from '../infrastructure/peopleContract';
+import type { StaffMember } from './peopleContract';
 import { explainCell, type CalculationInput, type CellCalculation } from './calculation';
 
 const okafor = employeeId('emp-001');

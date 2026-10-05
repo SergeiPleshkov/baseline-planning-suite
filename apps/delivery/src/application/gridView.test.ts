@@ -6,7 +6,7 @@ import { createPlan, projectMonths, type Plan } from '../domain/plan';
 import { allocation, items, ledger, portal, projects, testPlan } from '../domain/plan.fixtures';
 import { rateTimeline, type RateTimeline } from '../domain/rateTimeline';
 import { DISPLAY_UNITS, type DisplayUnit } from '../domain/units';
-import type { StaffMember } from '../infrastructure/peopleContract';
+import type { StaffMember } from './peopleContract';
 import {
   buildGrid,
   conversionFor,

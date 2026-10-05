@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { WorkloadResponseSchema } from '@baseline/delivery-contract';
 import { describe, expect, it } from 'vitest';
 import { documentFromState, stateFromDocument } from '../application/planDocument';
-import { workloadToContract } from '../infrastructure/workloadContract';
+import { workloadToContract } from '../application/workloadContract';
 import { deliveryDocumentFromSeed } from './seed';
 
 interface RawAllocation {

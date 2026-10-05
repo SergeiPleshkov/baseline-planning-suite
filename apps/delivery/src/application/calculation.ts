@@ -5,7 +5,7 @@ import type { Plan } from '../domain/plan';
 import { priceMonth } from '../domain/pricing';
 import { rateTimeline, type RateTimeline } from '../domain/rateTimeline';
 import { err, ok, type Result } from '../domain/result';
-import type { StaffMember } from '../infrastructure/peopleContract';
+import type { StaffMember } from './peopleContract';
 import { DISPLAY_DECIMALS, capacityPercentSteps, roundedColumn } from './figures';
 import { contributionsOf, type Contribution } from './overload';
 

@@ -5,7 +5,7 @@ import {
   staffFromPeople,
   type PeopleDataError,
   type StaffMember,
-} from '../infrastructure/peopleContract';
+} from './peopleContract';
 import type { ChangeFeed, PeopleSource } from './ports';
 
 /** What Delivery knows of People: who they are and what they cost. */

@@ -25,7 +25,7 @@ import {
   type ConversionContext,
   type DisplayUnit,
 } from '../domain/units';
-import type { StaffMember } from '../infrastructure/peopleContract';
+import type { StaffMember } from './peopleContract';
 import { DISPLAY_DECIMALS, capacityPercentSteps } from './figures';
 import { contributionsOf, type Contribution } from './overload';
 import { byKey, byName } from './sorting';

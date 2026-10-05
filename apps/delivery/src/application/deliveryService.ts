@@ -13,7 +13,7 @@ import {
 import { allocationId, breakdownItemId, employeeId, projectId } from '../domain/ids';
 import { cellKey, type Plan } from '../domain/plan';
 import { ok, type Result } from '../domain/result';
-import { workloadToContract } from '../infrastructure/workloadContract';
+import { workloadToContract } from './workloadContract';
 import {
   type DeletionSummaryDto,
   documentFromState,

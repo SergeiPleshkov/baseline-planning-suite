@@ -26,6 +26,8 @@ These are enforced by lint and tsconfig; keep them green rather than working aro
   behaviour. Never import another app's source.
 - `apps/*/src/domain` is plain TypeScript: no React, no DOM, no I/O, no contracts. Contract data is
   mapped to domain types outside the domain.
+- `apps/*/src/application` imports only application and domain code and no React; it reaches the
+  network and browser storage only through its ports.
 - The shell owns display currency and the active user and passes them as `RemoteAppProps`; each
   remote owns everything else it shows.
 - Remote URLs come from runtime configuration, never from the bundle.

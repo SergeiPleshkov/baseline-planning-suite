@@ -5,8 +5,8 @@ import { createChangeFeed, type EventSourceFactory } from './changeFeed';
 import { browserFetch, getJson, joinUrl, type Fetch } from './http';
 
 /**
- * Hands back People's answers as received: `peopleContract.ts` is where they are validated against
- * the published contract and turned into Delivery's own types.
+ * Hands back People's answers as received: `application/peopleContract.ts` is where they are
+ * validated against the published contract and turned into Delivery's own types.
  */
 export function createPeopleSource(options: {
   readonly baseUrl: string;

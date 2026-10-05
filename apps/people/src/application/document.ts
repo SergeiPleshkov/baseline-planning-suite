@@ -9,7 +9,7 @@ import { isoDate } from '../domain/calendar';
 import { employee, type Employee } from '../domain/employees';
 import { employeeId, rateId, type EmployeeId } from '../domain/ids';
 import { rateHistory, type RateHistory } from '../domain/rates';
-import { employeeToContract, rateToContract } from '../infrastructure/contract';
+import { employeeToContract, rateToContract } from './contract';
 
 /** What the service keeps on disk: the register and every rate, in the shape it publishes them. */
 const PeopleDocumentSchema = z.object({

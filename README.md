@@ -72,9 +72,10 @@ shell (host, :3000) ── reads /config.json at start-up ──► registers re
 - **Runtime remote resolution.** No remote URL is compiled into the shell. It fetches
   `/config.json` when it starts and registers `people` and `delivery` from there
   (`apps/shell/public/config.json` is the development copy).
-- **One React.** `react` and `react-dom` are shared as `singleton` with `strictVersion`. Hosted,
-  the remotes run on the shell's React; a remote built for an incompatible major fails to load
-  instead of starting a second React.
+- **One React.** `react` and `react-dom` are shared as singletons: hosted, the remotes render with
+  the shell's React and React DOM. With `strictVersion`, a remote whose React range the shell's
+  version does not satisfy fails to load, and its panel says why, instead of running on a React it
+  was not built for.
 - **Standalone and hosted from one build.** Each remote's `index.html` mounts the same component
   the shell loads through `./App`, wrapped in a minimal stand-in host.
 - **Isolation on failure.** Every remote renders in its own panel with a load timeout, an error
@@ -107,13 +108,20 @@ has only `infrastructure/` (runtime config, loading the remotes) and `ui/`.
 
 ```
 domain/           plain TypeScript, the rules: its own tsconfig, no DOM, no I/O, no contracts
-application/      stores, view models and ports; no React, no fetch
-infrastructure/   gateways, change feeds, runtime config, mapping of contract data
+application/      stores, view models and ports; checks what a schema cannot, and maps contract
+                  data to and from the domain; no React, I/O only through the ports
+infrastructure/   the I/O behind the ports: gateways that check each answer against its schema,
+                  change feeds, runtime config
 ui/               React components and their CSS Modules
 server/           Hono API, JSON store, event bus (bundled to dist-server/main.js)
 *App.tsx          the app's root component: ShellApp, and the PeopleApp and DeliveryApp that
                   the remotes expose as ./App; index.tsx and bootstrap.tsx start it
 ```
+
+Lint keeps the imports pointing inwards. Outside its tests, the domain depends on no package and on
+no other part of its app. Application code imports only application and domain code, never React,
+and reaches the network and browser storage only through its ports. The server imports neither the
+browser's adapters nor the UI, and no front-end code imports the server.
 
 ## Decisions
 
@@ -198,9 +206,11 @@ change, which is cheap at 720 allocations.
 It is the path the Module Federation team ships: the runtime API (`registerRemotes`, `loadRemote`),
 `mf-manifest.json`, and fast builds inside Docker. Webpack 5 shares the core but is slower, and
 Vite-based federation is weaker for singletons. Only `react` and `react-dom` are shared, as
-singletons with `strictVersion`, so a remote built for another major fails to load instead of
-starting a second React. Contracts and zod are bundled into every app: they hold no state and are
-small. `dts` is off, because types come from the contracts and not from another app's build.
+singletons with `strictVersion`: one React on the page, and a remote whose React range the shell's
+version does not satisfy fails to load instead of running on a React it was not built for. The cost
+is an order of deployment: the shell upgrades React before any remote raises its minimum. Contracts
+and zod are bundled into every app: they hold no state and are small. `dts` is off, because types
+come from the contracts and not from another app's build.
 
 ### Smaller decisions
 
@@ -229,13 +239,13 @@ small. `dts` is off, because types come from the contracts and not from another 
 
 The case study numbers its rules R1 to R5. Paths are under `apps/delivery/src` unless noted.
 
-| Rule                                            | Code                                                                                                                                                                                                                                                                | Tests                                                                                                                                                                                           |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| R1 Effective-dated rates, months split          | `domain/calendar.ts` (working days), `domain/rateTimeline.ts` (rate on a date), `domain/pricing.ts` (slices, cost, blended rate); People's own record rules in `apps/people/src/domain/rates.ts`                                                                    | `pricing.test.ts` (reference calculation), `calendar.test.ts`, `rateTimeline.test.ts`; the contract's vectors run in `infrastructure/peopleContract.test.ts` and in People's `contract.test.ts` |
-| R2 Four units, one stored value                 | `domain/units.ts` (conversions), `application/figures.ts` (display precision), `application/cellEntry.ts` (typed text to person-months)                                                                                                                             | `units.test.ts`, `figures.test.ts`, `cellEntry.test.ts`                                                                                                                                         |
-| R3 Totals add up                                | `domain/rounding/roundForDisplay.ts` and `cheapestCirculation.ts`, applied to the whole grid in `application/gridView.ts`                                                                                                                                           | `roundForDisplay.test.ts` and `cheapestCirculation.test.ts` (properties), `gridView.test.ts`                                                                                                    |
-| R4 Parents are derived; a leaf's allocations    | `domain/breakdown.ts` (add, move, delete), derived rows in `application/gridView.ts`, wording in `application/messages.ts`                                                                                                                                          | `breakdown.test.ts`, `deliveryStore.test.ts`                                                                                                                                                    |
-| R5 Capacity across projects, the cause is named | `domain/capacity.ts` (workload and cause), published at `GET /api/delivery/v1/workload`; People's badge in `apps/people/src/application/peopleStore.ts`; the list of over-capacity months in `application/overload.ts`, the cell marks in `application/gridView.ts` | `capacity.test.ts`, `overload.test.ts`, `server/deliveryApi.test.ts`; People's `peopleStore.test.ts`                                                                                            |
+| Rule                                            | Code                                                                                                                                                                                                                                                                | Tests                                                                                                                                                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 Effective-dated rates, months split          | `domain/calendar.ts` (working days), `domain/rateTimeline.ts` (rate on a date), `domain/pricing.ts` (slices, cost, blended rate); People's own record rules in `apps/people/src/domain/rates.ts`                                                                    | `pricing.test.ts` (reference calculation), `calendar.test.ts`, `rateTimeline.test.ts`; the contract's vectors run in `application/peopleContract.test.ts` and in People's `contract.test.ts` |
+| R2 Four units, one stored value                 | `domain/units.ts` (conversions), `application/figures.ts` (display precision), `application/cellEntry.ts` (typed text to person-months)                                                                                                                             | `units.test.ts`, `figures.test.ts`, `cellEntry.test.ts`                                                                                                                                      |
+| R3 Totals add up                                | `domain/rounding/roundForDisplay.ts` and `cheapestCirculation.ts`, applied to the whole grid in `application/gridView.ts`                                                                                                                                           | `roundForDisplay.test.ts` and `cheapestCirculation.test.ts` (properties), `gridView.test.ts`                                                                                                 |
+| R4 Parents are derived; a leaf's allocations    | `domain/breakdown.ts` (add, move, delete), derived rows in `application/gridView.ts`, wording in `application/messages.ts`                                                                                                                                          | `breakdown.test.ts`, `deliveryStore.test.ts`                                                                                                                                                 |
+| R5 Capacity across projects, the cause is named | `domain/capacity.ts` (workload and cause), published at `GET /api/delivery/v1/workload`; People's badge in `apps/people/src/application/peopleStore.ts`; the list of over-capacity months in `application/overload.ts`, the cell marks in `application/gridView.ts` | `capacity.test.ts`, `overload.test.ts`, `server/deliveryApi.test.ts`; People's `peopleStore.test.ts`                                                                                         |
 
 The reference calculation (Adaeze Okafor, March 2026: 88.00 h, €7,880.00, 50.0 %, €89.5455/h) is
 checked three times: as a domain test, through the figures of the calculation panel, and in a
@@ -327,9 +337,11 @@ whose versions can drift.
   data. Adding an optional field keeps v1, and so does a new event type, since a consumer dispatches
   on the SSE event name; consumers ignore fields they do not know. A change of meaning is a new
   version.
-- Delivery reads People's payloads in one place, `apps/delivery/src/infrastructure/peopleContract.ts`.
-  A rate history that parses but contradicts itself (two records on one day) is refused as a whole:
-  there is no right answer to price the person's days with. So is a payload that uses an id twice.
+- Delivery reads People's payloads in one place, `apps/delivery/src/application/peopleContract.ts`:
+  its gateway hands them over unparsed, so that the schema and the rules no schema states are
+  checked together. A rate history that parses but contradicts itself (two records on one day) is
+  refused as a whole: there is no right answer to price the person's days with. So is a payload
+  that uses an id twice.
 
 ## Domain rules
 
@@ -489,7 +501,9 @@ goes to its parent, Home and End jump), and the row that has the focus is the se
   limit and the rule about leaves that hold allocations are applied before the list is shown.
 - **Adding a child to a leaf with allocations** moves them onto the child and says so ("2 allocations
   were moved from … onto the new item …"). The button on the third level is disabled and the panel
-  says why.
+  says why. Every leaf of the seed is on the third level, so to try it there, move a leaf that holds
+  allocations up a level first: Design in Ledger Consolidation, moved under Ledger migration, hands
+  its 18 allocations to the child added next.
 - **Deleting** shows what goes: the items by name, the allocations and their total, read from the
   service. Confirming sends that summary back; if the subtree changed meanwhile nothing is deleted,
   the dialog says so and shows the new summary.

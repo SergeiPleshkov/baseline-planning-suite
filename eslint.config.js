@@ -77,36 +77,104 @@ export default defineConfig(
       'import-x/no-restricted-paths': [
         'error',
         {
-          zones: [
-            {
-              target: './apps/delivery/src/domain',
-              from: './apps/delivery/src',
-              except: ['./domain'],
-              message: 'Domain code must not import application, UI or infrastructure code.',
-            },
-            {
-              target: './apps/people/src/domain',
-              from: './apps/people/src',
-              except: ['./domain'],
-              message: 'Domain code must not import application, UI or infrastructure code.',
-            },
-          ],
+          // Zones are paths from the repository root, wherever ESLint runs from.
+          basePath: import.meta.dirname,
+          zones: ['people', 'delivery'].map((app) => ({
+            target: `./apps/${app}/src/domain`,
+            from: `./apps/${app}/src`,
+            except: ['./domain'],
+            message: 'Domain code must not import application, UI or infrastructure code.',
+          })),
         },
       ],
     },
   },
   {
-    // The browser bundle must never pull in the Node server that sits in the same package.
+    // Outside its tests, domain code depends on no package at all.
+    files: ['apps/*/src/domain/**/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.fixtures.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ regex: '^(?!\\.)', message: 'Domain code imports only domain code.' }] },
+      ],
+    },
+  },
+  {
+    // The browser bundle must never pull in the Node server that sits in the same package, and
+    // application code imports only application and domain code.
     files: ['apps/*/src/{ui,application,infrastructure}/**/*.{ts,tsx}', 'apps/*/src/*.tsx'],
     rules: {
       'import-x/no-restricted-paths': [
         'error',
         {
+          basePath: import.meta.dirname,
+          zones: ['people', 'delivery'].flatMap((app) => [
+            {
+              target: `./apps/${app}/src`,
+              from: `./apps/${app}/src/server`,
+              except: [],
+              message: 'Front-end code must not import the Node server.',
+            },
+            {
+              target: `./apps/${app}/src/application`,
+              from: `./apps/${app}/src`,
+              except: ['./application', './domain'],
+              message: 'Application code imports only application and domain code.',
+            },
+          ]),
+        },
+      ],
+    },
+  },
+  {
+    // Application code has no React, and reaches the network and browser storage only through its
+    // ports, which infrastructure implements.
+    files: ['apps/*/src/application/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { regex: '^react(-dom)?(/|$)', message: 'Application code must not depend on React.' },
+            {
+              regex: '^@baseline/(?!.+-contract$)',
+              message: 'Only @baseline/*-contract packages may cross a team boundary.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        ...[
+          'fetch',
+          'EventSource',
+          'XMLHttpRequest',
+          'WebSocket',
+          'localStorage',
+          'sessionStorage',
+          'indexedDB',
+          'window',
+          'document',
+          'location',
+          'navigator',
+        ].map((name) => ({ name, message: 'Application code reaches I/O through its ports.' })),
+      ],
+    },
+  },
+  {
+    // The server bundle must not pull in the browser's adapters or UI either.
+    files: ['apps/*/src/server/**/*.ts'],
+    rules: {
+      'import-x/no-restricted-paths': [
+        'error',
+        {
+          basePath: import.meta.dirname,
           zones: ['people', 'delivery'].map((app) => ({
-            target: `./apps/${app}/src`,
-            from: `./apps/${app}/src/server`,
+            target: `./apps/${app}/src/server`,
+            from: [`./apps/${app}/src/infrastructure`, `./apps/${app}/src/ui`],
             except: [],
-            message: 'Front-end code must not import the Node server.',
+            message: 'The server must not import browser adapters or UI code.',
           })),
         },
       ],

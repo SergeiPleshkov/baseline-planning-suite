@@ -17,7 +17,7 @@ import {
   type RemoveRateError,
 } from '../domain/rates';
 import { err, ok, type Result } from '../domain/result';
-import { rateToContract } from '../infrastructure/contract';
+import { rateToContract } from './contract';
 import { documentFromState, type PeopleDocument, type PeopleState } from './document';
 
 export type AddRateFailure = AddRateError | 'unknown-employee';
