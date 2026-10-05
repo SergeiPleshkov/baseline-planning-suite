@@ -101,6 +101,7 @@ shell (host, :3000) ── reads /config.json at start-up ──► registers re
 | `scripts/smoke.mjs`       | Checks a running stack from outside: config, manifests, APIs, streams.  |
 | `.github/workflows`       | CI: checks, then the compose stack with smoke and browser tests.        |
 | `knip.json`               | Settings for `pnpm knip`: unused files, exports and dependencies.       |
+| `.husky/pre-commit`       | Before each commit: lint-staged formats and lints the staged files.     |
 | `CLAUDE.md`, `.claude/`   | Project rules and guardrails for AI-assisted work with Claude Code.     |
 
 The three apps share one layout under `src/`. The shell has no rules of its own and no server, so it
@@ -270,6 +271,10 @@ pnpm build
 
 `pnpm test` runs the unit and property tests only; the running system is checked separately, see
 [Checks and CI](#checks-and-ci).
+
+`pnpm install` also turns on a pre-commit hook (husky): lint-staged formats the staged files with
+Prettier and lints the staged scripts with ESLint (`lint-staged` in `package.json`), and a lint
+error stops the commit. Typecheck, knip, tests and build check the whole repository and stay in CI.
 
 Each remote also runs on its own: open http://localhost:3001 or http://localhost:3002.
 
