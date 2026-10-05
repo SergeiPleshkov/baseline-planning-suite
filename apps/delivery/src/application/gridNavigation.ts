@@ -17,9 +17,9 @@ export interface Modifiers {
 
 /**
  * Where a key takes the focus in a grid, by the ARIA grid pattern: arrows move one cell and stop at
- * the edge, Home and End go to the ends of the row, with Ctrl to the corners of the grid. `null` for
- * a key the grid does not use, and for any combination the browser or the system owns (Alt+Arrow
- * is history, Cmd+Arrow too).
+ * the edge, Home and End go to the ends of the row, with Ctrl to the corners of the grid. `null`
+ * for a key the grid does not use, and for any combination the browser or the system owns
+ * (Alt+Arrow is history, Cmd+Arrow too).
  */
 export function movedFocus(
   from: GridPosition,
@@ -64,7 +64,7 @@ export interface RememberedFocus {
   readonly column: number;
 }
 
-/** The totals row comes after the lines. If the remembered row is hidden, the first row has the stop. */
+/** The totals row comes last. If the remembered row is hidden, the first row has the tab stop. */
 export function tabStopOf(
   focus: RememberedFocus,
   lineKeys: readonly string[],

@@ -8,7 +8,7 @@ import { err, ok, type Result } from './result';
 export const DISPLAY_UNITS = ['personMonths', 'hours', 'capacityPercent', 'cost'] as const;
 export type DisplayUnit = (typeof DISPLAY_UNITS)[number];
 
-/** Units that scale person-months by a constant, so that they need neither the person nor the month. */
+/** Units that scale person-months by a constant, so they need neither the person nor the month. */
 export type PlainUnit = Extract<DisplayUnit, 'personMonths' | 'capacityPercent'>;
 
 const PLAIN_SCALE: Readonly<Record<PlainUnit, number>> = { personMonths: 1, capacityPercent: 100 };

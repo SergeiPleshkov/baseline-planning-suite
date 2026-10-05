@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-// The stack under test is the one users get: `docker compose up --build`, reached through its gateway.
+// The stack under test is the one users get: `docker compose up --build`, reached at its gateway.
 // It must hold the seed data (`docker compose down -v` resets it): the tests read figures from it.
 const channel = process.env['E2E_BROWSER_CHANNEL'];
 

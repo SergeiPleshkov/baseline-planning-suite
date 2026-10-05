@@ -15,7 +15,7 @@ RUN pnpm install --offline --frozen-lockfile --filter "@baseline/shell..." \
  && rm apps/shell/dist/config.json
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine
-# The start-up script writes config.json next to the bundle, so the unprivileged user owns the folder.
+# The start-up script writes config.json next to the bundle: the unprivileged user owns the folder.
 USER root
 RUN chown nginx:nginx /usr/share/nginx/html
 USER nginx

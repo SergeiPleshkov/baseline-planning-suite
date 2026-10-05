@@ -22,7 +22,7 @@ type Summary =
   | {
       readonly status: 'ready';
       readonly summary: DeletionSummaryDto;
-      /** Fixed on arrival: deleting removes the items from the screen's plan, and their names with them. */
+      /** Fixed on arrival: deleting takes the items, and their names, out of the screen's plan. */
       readonly names: readonly string[];
     };
 

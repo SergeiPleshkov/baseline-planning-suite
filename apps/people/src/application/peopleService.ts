@@ -62,7 +62,7 @@ export function createPeopleService(deps: PeopleServiceDeps): PeopleService {
   let state = deps.initial;
   let queue: Promise<unknown> = Promise.resolve();
 
-  /** One change at a time: each reads the state the previous one left, and stores before it shows. */
+  /** One change at a time: each reads the state the last one left, and stores before it shows. */
   const serial = <T>(task: () => Promise<T>): Promise<T> => {
     const run = queue.then(task);
     queue = run.catch(() => undefined);

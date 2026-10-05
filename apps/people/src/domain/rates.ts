@@ -22,7 +22,7 @@ interface RateHistoryContents {
   readonly records: readonly RateRecord[];
 }
 
-/** The domain cannot import the contract, so its limit is repeated here and checked against it in a test. */
+/** Repeated from the contract, which the domain cannot import; a test keeps the two equal. */
 export const MAX_HOURLY_RATE_EUR = 10_000;
 
 /** A positive amount in whole cents: 1.005 is refused, not rounded to a rate nobody entered. */
@@ -111,7 +111,7 @@ export function removeRate(history: RateHistory, id: RateId): Result<RateHistory
   );
 }
 
-/** Leaves the employee without any rate, so their days cost nothing and are reported as unpriced. */
+/** Leaves the employee with no rate, so their days cost nothing and are reported as unpriced. */
 export const clearRates = (history: RateHistory): RateHistory => rebuilt(history, []);
 
 export interface EffectivePeriod {

@@ -19,8 +19,8 @@ interface Props {
 const NOTHING = '';
 
 /**
- * Gives a person a row on a leaf, to enter their allocations in. Nothing is stored until a figure is
- * entered; nothing is preselected, because assigning is a deliberate choice.
+ * Gives a person a row on a leaf, to enter their allocations in. Nothing is stored until a figure
+ * is entered; nothing is preselected, because assigning is a deliberate choice.
  */
 export function AssignDialog({ leaves, people, onSubmit, onClose }: Props) {
   const leafId = useId();

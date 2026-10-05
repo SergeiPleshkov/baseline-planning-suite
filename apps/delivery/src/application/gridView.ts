@@ -48,7 +48,7 @@ export interface GridCell {
   readonly active: boolean;
   /** The figure to show, in display steps of the unit (see `DISPLAY_DECIMALS`). */
   readonly steps: number;
-  /** What is stored for this cell; only a person's row has one, and only if something was planned. */
+  /** What is stored for the cell; only person rows have one, and only if something was planned. */
   readonly allocation: Allocation | null;
   /** Set when the cell's allocation is part of a month in which the person is over capacity. */
   readonly overCapacity: OverCapacity | null;

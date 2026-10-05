@@ -16,7 +16,7 @@ export interface ShownUnit {
   readonly currency: string;
 }
 
-/** A figure as typed: a number alone, a number with its unit (`88 h`, `50%`), or money (`€7,880`). */
+/** A typed figure: a plain number, a number with its unit (`88 h`, `50%`), or money (`€7,880`). */
 export type TypedFigure =
   | { readonly value: number; readonly unit: null }
   | { readonly value: number; readonly unit: Exclude<DisplayUnit, 'cost'> }
@@ -24,7 +24,7 @@ export type TypedFigure =
 
 const SHAPE = /^([-−])?\s*([\p{L}%€$£]*)\s*([-−])?\s*([\d.,\s]*?)\s*([\p{L}%€$£]*)$/u;
 const NUMBER = /^(\d+(\.\d*)?|\.\d+)$/;
-/** `7,880.00`: the grouping a cell is shown with. A group never starts with a zero, so `0,333` is a third. */
+/** `7,880.00`, as cells show figures. `0,333` is a third: grouped figures never begin with 0. */
 const GROUPED_EN = /^[1-9]\d{0,2}(,\d{3})+(\.\d*)?$/;
 /** `7.880,00`: unambiguous only with the decimal comma. */
 const GROUPED_DE = /^[1-9]\d{0,2}(\.\d{3})+,\d*$/;

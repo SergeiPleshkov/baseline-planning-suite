@@ -75,7 +75,7 @@ describe('canHaveChildren', () => {
 
 describe('moveTargets', () => {
   it('offers only places the domain accepts, and not where the item already is', () => {
-    // design: not under itself's own place (discovery), review (a fourth level) or cutover (holds
+    // design: not under its current parent (discovery), review (a fourth level) or cutover (holds
     // allocations), nor in another project.
     expect(moveTargets(testPlan(), id('design')).map((target) => target.label)).toEqual([
       'Top level',

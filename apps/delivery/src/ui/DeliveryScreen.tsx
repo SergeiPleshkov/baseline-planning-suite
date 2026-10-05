@@ -188,7 +188,7 @@ export function DeliveryScreen({ store, staff, currency }: Props) {
         </span>
       </div>
 
-      {/* Kept mounted while hidden, so that the unit, months and open rows survive a visit to the other view. */}
+      {/* Kept mounted while hidden: unit, months and open rows survive a visit to Breakdown. */}
       <div hidden={mode !== 'staffing'}>
         <StaffingScreen
           key={project.id}

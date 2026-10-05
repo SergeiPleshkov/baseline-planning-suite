@@ -45,7 +45,7 @@ export async function correctOkaforRate(page: Page, eur: number): Promise<void> 
   ).toBeVisible();
 }
 
-/** Types into a cell through its editor, which is how a character with no key of its own (€) arrives. */
+/** Types into a cell's editor, which is how a character with no key of its own (€) arrives. */
 export async function typeInto(page: Page, cell: Locator, text: string): Promise<void> {
   await cell.click();
   await page.keyboard.press('Enter');

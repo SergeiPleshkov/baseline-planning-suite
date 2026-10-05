@@ -23,7 +23,7 @@ type RegisterView =
       readonly status: 'ready';
       readonly employees: readonly Employee[];
       readonly histories: ReadonlyMap<EmployeeId, RateHistory>;
-      /** Set when the last read failed or the stream that announces changes broke: what is shown may be out of date. */
+      /** Set when the last read failed or the change stream broke: what is shown may be stale. */
       readonly stale: string | null;
     };
 
@@ -45,7 +45,7 @@ export interface PeopleStore {
   /** Reads everything again; also what a Retry button calls. */
   load: () => Promise<void>;
   reloadWorkload: () => Promise<void>;
-  /** Reads the register again whenever People says rates changed, in another tab too. Returns how to stop. */
+  /** Reads the register again after any rate change, here or elsewhere. Returns how to stop. */
   followRates: (feed: ChangeFeed) => () => void;
   /** Reads Delivery's figures again whenever it says they changed. Returns how to stop. */
   followWorkload: (feed: ChangeFeed) => () => void;
@@ -71,8 +71,8 @@ const reason = (error: unknown): string => (error instanceof Error ? error.messa
 /**
  * Reads one at a time, never two at once. A read asked for while one is under way runs after it,
  * since the one under way may not show what changed; the returned promise settles when the last has
- * finished. A read that failed is tried again after a pause that doubles, but only while a stream is
- * being followed: nothing else would prompt it.
+ * finished. A read that failed is tried again after a pause that doubles, but only while a stream
+ * is being followed: nothing else would prompt it.
  */
 function singleFlight(read: () => Promise<boolean>) {
   let running: Promise<void> | null = null;
@@ -168,7 +168,7 @@ export function createPeopleStore(gateways: {
     } catch (error) {
       registerError = reason(error);
       const { register } = snapshot;
-      // Data already on screen stays: a failed refresh must not throw away what the person is using.
+      // What is on screen stays: a failed refresh must not throw away what the person is using.
       publish({
         register:
           register.status === 'ready'
@@ -219,7 +219,10 @@ export function createPeopleStore(gateways: {
   const registerReads = singleFlight(readRegister);
   const workloadReads = singleFlight(readWorkload);
 
-  /** After a command the service is the source of truth: read the rates again, also when a command's outcome is unknown. */
+  /**
+   * After a command the service is the source of truth: read the rates again, also when the
+   * command's outcome is unknown.
+   */
   async function afterCommand(result: CommandResult): Promise<CommandResult> {
     if (result.ok || result.outcomeUnknown === true) await registerReads.refresh();
     return result;

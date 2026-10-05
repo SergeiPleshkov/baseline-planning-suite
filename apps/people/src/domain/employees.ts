@@ -16,7 +16,7 @@ export function employee(fields: Employee): Employee {
   return { id: fields.id, name: fields.name, role: fields.role, weeklyHours: fields.weeklyHours };
 }
 
-/** Letters that Unicode does not build from a base letter and a mark, folded the way people type. */
+/** Letters Unicode does not build from a base letter and a mark, folded the way people type. */
 const FOLDED_LETTERS: Readonly<Record<string, string>> = {
   ß: 'ss',
   æ: 'ae',

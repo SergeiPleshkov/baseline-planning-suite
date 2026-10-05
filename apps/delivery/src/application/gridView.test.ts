@@ -343,7 +343,7 @@ describe('marks on a person’s cell', () => {
   };
 
   it('blames an over-allocated month on the allocation edited last, wherever it sits', () => {
-    // M. Brandt, June 2026: 0.59 on Ledger (alloc-050) and 0.59 on Portal (alloc-073, edited later).
+    // M. Brandt, June 2026: 0.59 on Ledger (alloc-050), 0.59 on Portal (alloc-073, edited later).
     const inLedger = cellIn(gridOf(testPlan()), 'design', 'emp-003', '2026-06').overCapacity;
     expect(inLedger).toMatchObject({ personMonths: 1.18, percentSteps: 1180, isLatestEdit: false });
     expect(inLedger?.contributions.map((each) => each.allocation.id)).toEqual([

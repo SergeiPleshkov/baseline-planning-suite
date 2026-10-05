@@ -189,7 +189,7 @@ export default defineConfig(
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
-    // ESLint knows no Node or web-platform globals without another package; only these few are used.
+    // ESLint knows no Node or web globals without another package; only these few are used.
     files: ['scripts/**/*.mjs'],
     languageOptions: {
       globals: {

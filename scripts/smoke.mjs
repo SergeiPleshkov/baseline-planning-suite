@@ -11,7 +11,7 @@ const API = { people: '/api/people/v1', delivery: '/api/delivery/v1' };
 const GATEWAY_ERRORS = [502, 503, 504];
 const READY_WITHIN_MS = 90_000;
 const REQUEST_TIMEOUT_MS = 10_000;
-// A service that was just started may still be booting, and the gateway caches addresses for a few seconds.
+// A service just started may still be booting, and the gateway caches addresses for a few seconds.
 const SETTLE_WITHIN_MS = 30_000;
 
 const args = process.argv.slice(2);
@@ -68,7 +68,7 @@ async function waitForGateway() {
   }
 }
 
-/** Tries again for a while: what fails once may only be late. The last failure is the one reported. */
+/** Tries again for a while: what fails once may only be late. The last failure is reported. */
 async function settle(run) {
   const deadline = Date.now() + SETTLE_WITHIN_MS;
   for (;;) {

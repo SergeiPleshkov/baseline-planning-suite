@@ -1,6 +1,7 @@
 # One command: `docker compose up --build`, then open http://localhost:8080.
 # Only the shell's gateway is published; the remotes and their APIs are reached through it.
-# Each service keeps its data in a named volume: it survives restarts, `docker compose down -v` resets it to the seed.
+# Each service keeps its data in a named volume, which survives restarts;
+# `docker compose down -v` resets it to the seed.
 services:
   shell:
     build:

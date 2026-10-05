@@ -13,7 +13,7 @@ interface Props {
   readonly onShow: (entry: OverloadEntry) => void;
 }
 
-/** The person-months above capacity that involve this project, each with a way to find it in the grid. */
+/** Over-capacity person-months involving this project, each with a way to find it in the grid. */
 export function OverloadList({ entries, project, nameOf, canShow, onShow }: Props) {
   if (entries.length === 0) {
     return <p className={styles.none}>No one is over capacity on this project.</p>;

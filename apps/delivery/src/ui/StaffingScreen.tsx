@@ -70,7 +70,7 @@ export function StaffingScreen({ plan, project, store, staff, currency }: Props)
   const [reveal, setReveal] = useState<{ key: string; month: YearMonth | null } | null>(null);
   const [inspected, setInspected] = useState<InspectedCell | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
-  // Text left in a cell that could not be saved, named by its cell; it goes with the next saved figure.
+  // Text left in a cell that was not saved, named by its cell; it goes with the next saved figure.
   const [dropped, setDropped] = useState<string | null>(null);
 
   const ownSpan = useMemo(() => projectMonths(project), [project]);

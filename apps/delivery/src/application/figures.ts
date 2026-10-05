@@ -55,6 +55,6 @@ export function roundedColumn(
   return { parts: values.map((_, index) => at(String(index)).total), total: at('column').total };
 }
 
-/** A share of a person-month as display steps of percent of capacity: 1.18 is 1180 steps, 118.0 %. */
+/** Person-months as display steps of percent of capacity: 1.18 is 1180 steps, 118.0 %. */
 export const capacityPercentSteps = (personMonths: number): number =>
   roundedColumn([personMonths * 100], DISPLAY_DECIMALS.capacityPercent).total;

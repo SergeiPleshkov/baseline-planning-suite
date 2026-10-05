@@ -25,11 +25,11 @@ interface Props {
   readonly currency: string;
   readonly collapsed: ReadonlySet<BreakdownItemId>;
   readonly onToggle: (id: BreakdownItemId) => void;
-  /** Takes a figure typed into a cell: the reason it is refused, or `null` once it is on its way. */
+  /** Takes a figure typed into a cell: why it is refused, or `null` once it is on its way. */
   readonly onEdit: (line: PersonLine, cell: GridCell, text: string) => string | null;
-  /** Says why the text of a cell that was left was not saved: there is no input left to show it in. */
+  /** Says why the text of a cell that was left was not saved: no input is left to show it in. */
   readonly onRefused: (line: PersonLine, cell: GridCell, reason: string) => void;
-  /** A person's row to bring the focus to, by line key, at a month if it is shown; `onRevealed` says it was done. */
+  /** A person's row to focus, by line key, at a month if shown; `onRevealed` says it was done. */
   readonly reveal: { readonly key: string; readonly month: YearMonth | null } | null;
   readonly onRevealed: () => void;
   /** The person's cell that has the focus, or `null` when the focus is elsewhere in the grid. */

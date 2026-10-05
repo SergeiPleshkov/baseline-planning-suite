@@ -5,8 +5,8 @@
  * with these schemas and maps the result into its own model.
  *
  * Compatibility: adding an optional field keeps v1, and so does a new event type, since a consumer
- * dispatches on the SSE event name and ignores names it does not know. Consumers ignore unknown fields. Anything else, including a change to the rate semantics below, is
- * a new contract version.
+ * dispatches on the SSE event name and ignores names it does not know. Consumers ignore unknown
+ * fields. Anything else, including a change to the rate semantics below, is a new contract version.
  */
 import { z } from 'zod';
 
@@ -78,7 +78,7 @@ export const RatesChangedEventSchema = z.object({
   type: z.literal('rates-changed'),
   version: z.literal(1),
   employeeIds: z.array(Id).min(1),
-  /** The revision `/rates` has once the change is in; a read at this revision or later includes it. */
+  /** The revision of `/rates` with the change in; a read at this revision or later includes it. */
   revision: Revision,
 });
 

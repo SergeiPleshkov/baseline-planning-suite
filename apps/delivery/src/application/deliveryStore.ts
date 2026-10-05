@@ -109,8 +109,8 @@ export function createDeliveryStore(gateway: DeliveryGateway): DeliveryStore {
     snapshot.plan.status === 'ready' ? snapshot.plan.plan : null;
 
   /**
-   * Reads the plan from the service, the source of truth. If that fails, `fallback` is what stays on
-   * screen, marked as possibly out of date.
+   * Reads the plan from the service, the source of truth. If that fails, `fallback` is what stays
+   * on screen, marked as possibly out of date.
    */
   async function readPlan(fallback: Plan | null = readyPlan()): Promise<void> {
     try {
@@ -183,7 +183,7 @@ export function createDeliveryStore(gateway: DeliveryGateway): DeliveryStore {
       serial(async (): Promise<AddOutcome> => {
         const current = readyPlan();
         if (!current) return { ok: false, message: NOT_LOADED };
-        // Not optimistic: the service gives the new item its id. The domain still gets to refuse first.
+        // Not optimistic: the service gives the new item its id. The domain still checks it first.
         const trial = addItem(current, {
           id: unusedId(current),
           projectId: project,

@@ -21,7 +21,7 @@ export default defineConfig({
     }),
   ],
   html: { title: 'People · Baseline' },
-  // Chunks resolve from wherever the manifest was served: standalone, in the shell, behind a gateway.
+  // Chunks load from wherever the manifest was served: standalone, in the shell, behind a gateway.
   output: { assetPrefix: 'auto' },
   // Development only: the shell is on another port. Deployed, everything is same-origin.
   server: {

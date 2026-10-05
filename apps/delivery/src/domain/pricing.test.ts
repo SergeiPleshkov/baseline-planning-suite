@@ -12,7 +12,7 @@ const rates = (...changes: [string, number][]) =>
   );
 
 describe('reference calculation (case study, figure 4)', () => {
-  // A. Okafor, 40 h/week, €80/h from 2025-01-01 and €95/h from 2026-03-12, 0.50 PM in March 2026.
+  // A. Okafor, 40 h/week, €80/h from 2025-01-01, €95/h from 2026-03-12, 0.50 PM in March 2026.
   const pricing = priceMonth(
     yearMonth('2026-03'),
     40,

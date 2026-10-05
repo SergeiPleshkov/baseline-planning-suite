@@ -16,7 +16,7 @@ export type StaffView =
       readonly status: 'ready';
       readonly staff: ReadonlyMap<EmployeeId, StaffMember>;
       readonly rates: ReadonlyMap<EmployeeId, RateTimeline>;
-      /** Set when People could not be read again, or its stream broke: what is shown may be out of date. */
+      /** Set when reading People again failed or its stream broke: what is shown may be stale. */
       readonly stale: string | null;
     };
 

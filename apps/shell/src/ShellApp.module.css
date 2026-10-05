@@ -73,7 +73,8 @@
   grid-template-columns: 1fr 1fr;
 }
 
-/* A grid item will not shrink below its content: without this a wide grid in one panel squeezes the other. */
+/* A grid item will not shrink below its content:
+   without this a wide grid in one panel squeezes the other. */
 .sideBySide > * {
   min-width: 0;
 }

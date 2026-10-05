@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs before nginx starts: the remote entries come from the container's environment, not the bundle.
+# Runs before nginx starts: the remote entries come from the environment, not the bundle.
 set -eu
 envsubst '${PEOPLE_REMOTE_ENTRY} ${DELIVERY_REMOTE_ENTRY}' \
   < /etc/baseline/config.json.template \
